@@ -1,0 +1,757 @@
+/* resource/css/generarPago.css */
+
+/* --------------------------------------------------------------------------------
+   0) ESCOPAR TODOS LOS ESTILOS DENTRO DE .generarPago-container
+   ---------------------------------------------------------------------------- */
+.generarPago-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    background-color: var(--f-card-background-color, white);
+    padding: 0.50rem 1.5rem 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: var(--f-card-box-shadow, 0 10px 25px rgba(0, 0, 0, 0.1));
+    font-family: sans-serif;
+    color: var(--f-text-color, #374151);
+}
+
+/* Modo oscuro SOLO para nuestro contenedor */
+.generarPago-container.dark {
+    background-color: var(--f-card-background-color-dark, #1f2937);
+    box-shadow: var(--f-card-box-shadow-dark, 0 10px 25px rgba(0, 0, 0, 0.3));
+    color: var(--f-text-color-dark, #d1d5db);
+}
+
+
+/* --------------------------------------------------------------------------------
+   1) FLEX BETWEEN: Encabezado con botón de navegación
+   ---------------------------------------------------------------------------- */
+.generarPago-container .flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.5rem;
+}
+
+.generarPago-container button.nav-btn {
+    padding: 0.5rem;
+    border: none;
+    background-color: var(--f-button-secondary-background-color, #f1f1f1);
+    color: var(--f-button-secondary-text-color, #4b5563);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; /* Para centrar el SVG si es necesario */
+    align-items: center;
+    justify-content: center;
+}
+
+.generarPago-container.dark button.nav-btn {
+    background-color: var(--f-button-secondary-background-color-dark, #374151);
+    color: var(--f-button-secondary-text-color-dark, #e7e5eb);
+}
+
+.generarPago-container button.nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+
+/* --------------------------------------------------------------------------------
+   2) TITULOS Y LABELS
+   ---------------------------------------------------------------------------- */
+.generarPago-container h2 {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-top: 0.50rem;
+    margin-bottom: 0.75rem;
+}
+
+.generarPago-container label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+
+/* --------------------------------------------------------------------------------
+   3) INPUTS Y TEXTAREAS (SÓLO DENTRO DE .generarPago-container)
+   ---------------------------------------------------------------------------- */
+.generarPago-container input[type="text"],
+.generarPago-container input[type="date"],
+.generarPago-container input[type="number"],
+.generarPago-container textarea {
+    width: 100%;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--f-input-border-color, #ccc);
+    margin-bottom: 1rem;
+    box-sizing: border-box;
+    background-color: var(--f-input-background-color, #f3f4f6);
+    color: var(--f-input-text-color, #374151);
+}
+
+.generarPago-container.dark input[type="text"],
+.generarPago-container.dark input[type="date"],
+.generarPago-container.dark input[type="number"],
+.generarPago-container.dark textarea {
+    background-color: var(--f-input-background-color-dark, #1f2937);
+    color: var(--f-input-text-color-dark, #d1d5db);
+    border-color: var(--f-input-border-color-dark, #4b5563);
+}
+
+
+/* --------------------------------------------------------------------------------
+   4) CLASES DE “DIAS VENCIDO” Y “DIAS FALTANTE” (SÓLO DENTRO DEL CONTENEDOR)
+   ---------------------------------------------------------------------------- */
+.generarPago-container .dias-vencido {
+    background-color: rgb(243, 165, 157) !important;
+    color: #991b1b !important;
+    border-color: rgb(250, 96, 96) !important;
+}
+
+.generarPago-container .dias-faltante {
+    background-color: rgb(174, 245, 208) !important;
+    color: #065f46 !important;
+    border-color: #34d399 !important;
+}
+
+
+/* --------------------------------------------------------------------------------
+   5) BOTONES (“Guardar”, “Blue”, etc.) DENTRO DEL CONTENEDOR
+   ---------------------------------------------------------------------------- */
+.generarPago-container .btn-guardar {
+    width: 100%;
+    padding: 0.6rem;
+    background-color: var(--f-button-primary-background-color, rgb(3, 150, 10));
+    color: var(--f-button-primary-text-color, white);
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.generarPago-container.dark .btn-guardar {
+    background-color: var(--f-button-primary-background-color-dark, rgb(3, 133, 9));
+    color: var(--f-button-primary-text-color-dark, white);
+}
+
+.generarPago-container .btn-guardar:hover {
+    background: rgb(3, 128, 30);
+}
+
+.generarPago-container .btn-blue {
+    width: 100%;
+    padding: 0.6rem;
+    margin-top: 0.75rem;
+    background-color: var(--f-button-primary-background-color, rgb(4, 170, 199));
+    color: var(--f-button-primary-text-color, white);
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.generarPago-container.dark .btn-blue {
+    background-color: var(--f-button-primary-background-color-dark, rgb(28, 140, 148));
+    color: var(--f-button-primary-text-color-dark, white);
+}
+
+.generarPago-container .btn-blue:hover {
+    background: rgb(3, 146, 134);
+}
+
+
+/* --------------------------------------------------------------------------------
+   6) OVERLAY Y MODAL (SÓLO EN CONTENEDOR)
+   ---------------------------------------------------------------------------- */
+.generarPago-container .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: none; /* Controlado por Livewire: se cambia a flex cuando toca */
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+}
+
+.generarPago-container .modal {
+    background-color: var(--f-card-background-color, white);
+    color: var(--f-text-color, #374151);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: var(--f-card-box-shadow, 0 10px 25px rgba(0, 0, 0, 0.1));
+}
+
+.generarPago-container.dark .modal {
+    background-color: var(--f-card-background-color-dark, #1f2937);
+    color: var(--f-text-color-dark, #d1d5db);
+    box-shadow: var(--f-card-box-shadow-dark, 0 10px 25px rgba(0, 0, 0, 0.3));
+}
+
+.generarPago-container .modal h3 {
+    margin-bottom: 1rem;
+    font-size: 1.25rem; /* Ligero ajuste para títulos de modal */
+    font-weight: bold;
+}
+
+.generarPago-container .modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.generarPago-container .btn-cancelar,
+.generarPago-container .btn-confirmar {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.generarPago-container .btn-cancelar {
+    background-color: var(--f-button-secondary-background-color, #e5e7eb);
+    color: var(--f-button-secondary-text-color, #4b5563);
+}
+
+.generarPago-container.dark .btn-cancelar {
+    background-color: var(--f-button-secondary-background-color-dark, #374151);
+    color: var(--f-button-secondary-text-color-dark, #e5e7eb);
+}
+
+.generarPago-container .btn-confirmar {
+    background-color: var(--f-button-primary-background-color, rgb(3, 150, 10));
+    color: var(--f-button-primary-text-color, white);
+}
+
+.generarPago-container.dark .btn-confirmar {
+    background-color: var(--f-button-primary-background-color-dark, rgb(3, 104, 53));
+    color: var(--f-button-primary-text-color-dark, white);
+}
+
+.generarPago-container .btn-confirmar:hover {
+    background: rgb(3, 104, 53);
+}
+
+
+/* --------------------------------------------------------------------------------
+   7) ALERTAS (success, warning, danger, info) SOLO EN CONTENEDOR
+   ---------------------------------------------------------------------------- */
+.generarPago-container .alert {
+    padding: 0.8rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid transparent; /* Asegura borde para todas las alertas */
+}
+
+.generarPago-container .alert-success {
+    background-color: #d1fae5;
+    color: #065f46;
+    border-color: #a7f3d0;
+}
+
+.generarPago-container .alert-warning {
+    background-color: #fef3c7;
+    color: #92400e;
+    border-color: #fde68a;
+}
+
+.generarPago-container .alert-danger {
+    background-color: #fee2e2;
+    color: #991b1b;
+    border-color: #fca5a5;
+}
+
+.generarPago-container .alert-info {
+    background-color: #e0f2fe;
+    color: #0369a1;
+    border-color: #7dd3fc;
+}
+
+
+/* --------------------------------------------------------------------------------
+   8) TEXT-SM (para errores o textos pequeños) DENTRO DE CONTENEDOR
+   ---------------------------------------------------------------------------- */
+.generarPago-container .text-sm {
+    font-size: 0.875rem;
+}
+
+
+/* --------------------------------------------------------------------------------
+   9) ROWS Y COLUMNS FLEX (SÓLO DENTRO DEL FORMULARIO)
+   ---------------------------------------------------------------------------- */
+.generarPago-container .form-row-flex {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.generarPago-container .form-col-flex {
+    flex: 1;
+}
+
+/* Al colocar inputs dentro de .form-col-flex, anulamos el margin-bottom extra */
+.generarPago-container .form-col-flex input {
+    margin-bottom: 0;
+}
+
+
+/* --------------------------------------------------------------------------------
+ 10) BOTÓN SECUNDARIO (asumiendo que también es parte del formulario)
+   ---------------------------------------------------------------------------- */
+.generarPago-container .btn-secondary {
+    width: 100%;
+    padding: 0.6rem;
+    background-color: var(--f-button-secondary-background-color, #e5e7eb);
+    color: var(--f-button-secondary-text-color, #4b5563);
+    border: 1px solid var(--f-input-border-color, #ccc);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 0.75rem;
+}
+
+.generarPago-container.dark .btn-secondary {
+    background-color: var(--f-button-secondary-background-color-dark, #374151);
+    color: var(--f-button-secondary-text-color-dark, #e5e7eb);
+    border-color: var(--f-input-border-color-dark, #4b5563);
+}
+
+.generarPago-container .btn-secondary:hover {
+    background-color: var(--f-button-secondary-background-color-hover, #d1d5db);
+}
+
+.generarPago-container.dark .btn-secondary:hover {
+    background-color: var(--f-button-secondary-background-color-hover-dark, #4b5563);
+}
+
+/*
+ 11) (MODELO) REEMPLAZO DE CLASES PARA FILAMENT/Tailwind EN MODO DARK
+     (Si no tienes estas clases globales, las definimos aquí para tu contenedor)
+   ---------------------------------------------------------------------------- */
+.generarPago-container.dark .bg-gray-100 {
+    background-color: #374151; /* gray-700 */
+}
+
+.generarPago-container.dark .border-gray-300 {
+    border-color: #4b5563; /* gray-600 */
+}
+
+.generarPago-container.dark .text-gray-900 {
+    color: #d1d5db; /* gray-300 */
+}
+
+
+/* --------------------------------------------------------------------------------
+ 12) ESTILO “filter-active” DENTRO DEL CONTENEDOR
+   ---------------------------------------------------------------------------- */
+.generarPago-container .search-icon-btn.filter-active {
+    /* Línea inferior */
+    border-bottom: 4px solid #917b03; /* Amarillo, adj. */
+    padding-bottom: 2px; /* Espacio para que el borde no quede pegado al icono */
+
+    /* Sombra hacia arriba */
+    background-color: #f3f705d3;
+    border-radius: 100%;
+}
+
+
+/* --------------------------------------------------------------------------------
+ 13) BUSCADOR Y FILTRO (SÓLO EN CONTENEDOR)
+   ---------------------------------------------------------------------------- */
+.generarPago-container .search-container {
+    position: relative; /* Mantener si los inputs/selects son absolutos */
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* Asegúrate de que no esté comentado */
+    margin-bottom: 1rem;
+    font-weight: bold;
+    font-size: 1.25rem;
+    flex-wrap: wrap; /* Para pantallas pequeñas, se envuelven */
+}
+
+.generarPago-container .search-container h2 {
+    /* Quitamos margin-right: auto; */
+    margin-top: 0;    /* Reiniciamos margen del h2 dentro del flex */
+    margin-bottom: 0; /* Reiniciamos margen del h2 dentro del flex */
+}
+
+.generarPago-container .search-icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--f-text-color, #374151);
+    transition: border-bottom 0.1s ease-in-out, background-color 0.2s ease; /* Added background-color transition */
+    margin-left: 0.5rem; /* Espacio entre el nombre del cliente y los iconos/entre iconos */
+}
+
+.generarPago-container.dark .search-icon-btn {
+    color: var(--f-text-color-dark, #d1d5db);
+}
+
+/* Contenedor para mantener espacio uniforme entre iconos */
+.generarPago-container .flex.items-center.space-x-2 { /* Esta clase es de Tailwind, si la usas, mantenla. Si no, usa gap en el div padre. */
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Espacio entre iconos */
+}
+
+
+/*
+ 14) ENVOLTORIO DEL INPUT Y SELECT DE FILTROS PARA ANIMACIÓN
+    (SÓLO EN CONTENEDOR)
+   ---------------------------------------------------------------------------- */
+.generarPago-container .search-input-wrapper,
+.generarPago-container .filter-select-wrapper {
+    position: absolute; /* Pueden superponerse si se activan al mismo tiempo */
+    top: 100%;  /* Posiciona debajo del título/iconos */
+    left: 0;
+    width: 100%;
+    z-index: 10;
+    transform-origin: top;
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+    transform: scaleY(0);
+    opacity: 0;
+    overflow: hidden;
+    pointer-events: none;
+    margin-top: 0.5rem;
+    display: flex;
+    align-items: center;
+    background-color: var(--f-card-background-color, white);
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    box-shadow: var(--f-card-box-shadow, 0 5px 15px rgba(0, 0, 0, 0.08));
+}
+
+.generarPago-container.dark .search-input-wrapper,
+.generarPago-container.dark .filter-select-wrapper {
+    background-color: var(--f-card-background-color-dark, #1f2937);
+    box-shadow: var(--f-card-box-shadow-dark, 0 5px 15px rgba(0, 0, 0, 0.2));
+}
+
+.generarPago-container .search-input-wrapper.active,
+.generarPago-container .filter-select-wrapper.active {
+    transform: scaleY(1);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.generarPago-container .search-input-wrapper input.search-input { /* Especificidad para el input de búsqueda */
+    flex-grow: 1;
+    margin-bottom: 0; /* Anula el margen por defecto de los inputs generales */
+}
+
+.generarPago-container .clear-search-btn,
+.generarPago-container .clear-filter-btn { /* Unificamos botones de limpiar/cerrar */
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem; /* Ajusta según el tamaño del SVG */
+    color: var(--f-text-color, #6b7280);
+    margin-left: 0.5rem;
+    padding: 0.2rem;
+    border-radius: 50%;
+    transition: background-color 0.2s ease;
+    display: flex; /* Para centrar SVG */
+    align-items: center;
+    justify-content: center;
+}
+
+.generarPago-container.dark .clear-search-btn,
+.generarPago-container.dark .clear-filter-btn {
+    color: var(--f-text-color-dark, #9ca3af);
+}
+
+.generarPago-container .clear-search-btn:hover,
+.generarPago-container .clear-filter-btn:hover {
+    background-color: var(--f-button-secondary-background-color, #e5e7eb);
+}
+
+.generarPago-container.dark .clear-search-btn:hover,
+.generarPago-container.dark .clear-filter-btn:hover {
+    background-color: var(--f-button-secondary-background-color-hover-dark, #4b5563);
+}
+
+/* Estilos para el select dentro de .filter-select-wrapper */
+.generarPago-container .filter-select {
+    flex-grow: 1;
+    padding: 0.5rem; /* Igual que inputs */
+    border-radius: 0.5rem; /* Igual que inputs */
+    border: 1px solid var(--f-input-border-color, #d1d5db);
+    background-color: var(--f-input-background-color, #f3f4f6);
+    color: var(--f-input-text-color, #1f2937);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='currentColor'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd'/%3E%3C/svg%3E"); /* Flecha SVG */
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1.5em;
+    margin-bottom: 0; /* Quitamos margen por defecto */
+}
+
+.generarPago-container.dark .filter-select {
+    background-color: var(--f-input-background-color-dark, #374151);
+    border-color: var(--f-input-border-color-dark, #4b5563);
+    color: var(--f-input-text-color-dark, #d1d5db);
+}
+
+
+/* --------------------------------------------------------------------------------
+ 15) MEDIA QUERY PARA QUE EL MODAL SEA RESPONSIVO
+   ---------------------------------------------------------------------------- */
+@media (max-width: 480px) {
+    .generarPago-container .modal {
+        width: 90%;
+    }
+}
+
+
+/* --------------------------------------------------------------------------------
+ 16) VALIDATION-ERROR (SÓLO DENTRO DE CONTENEDOR)
+   ---------------------------------------------------------------------------- */
+.generarPago-container .validation-error {
+    background-color: #fee2e2;
+    color: #991b1b;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    margin-top: 0.5rem;
+    display: block;
+    font-size: 0.875rem; /* Tamaño de fuente ajustado */
+}
+
+.generarPago-container.dark .validation-error {
+    background-color: #450a0a;
+    color: #fca5a5;
+}
+
+/* --------------------------------------------------------------------------------
+ 17) NUEVAS CARDS SEPARADAS (Quick Filters, Payment Details)
+   ---------------------------------------------------------------------------- */
+.generarPago-container .quick-filters-card,
+.generarPago-container .payment-details-card {
+    background-color: var(--f-card-background-color, white);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: var(--f-card-box-shadow, 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06));
+    margin-bottom: 1rem;
+}
+
+.generarPago-container.dark .quick-filters-card,
+.generarPago-container.dark .payment-details-card {
+    background-color: var(--f-card-background-color-dark, #1f2937);
+    box-shadow: var(--f-card-box-shadow-dark, 0 4px 6px -1px rgba(0,0,0,0.4), 0 2px 4px -1px rgba(0,0,0,0.2));
+}
+
+/* --------------------------------------------------------------------------------
+ 18) BOTONES DE FILTRO RÁPIDO (Préstamos Vencidos / Al Día)
+   ---------------------------------------------------------------------------- */
+.generarPago-container .quick-filter-btn {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    background-color: var(--f-button-secondary-background-color, #e5e7eb);
+    color: var(--f-button-secondary-text-color, #374151);
+}
+
+.generarPago-container .quick-filter-btn:hover {
+    background-color: #d1d5db;
+}
+
+.generarPago-container.dark .quick-filter-btn {
+    background-color: var(--f-button-secondary-background-color-dark, #374151);
+    color: var(--f-button-secondary-text-color-dark, #d1d5db);
+}
+
+.generarPago-container.dark .quick-filter-btn:hover {
+    background-color: #4b5563;
+}
+
+.generarPago-container .quick-filter-btn.active {
+    background-color: #4f46e5; /* bg-indigo-600 */
+    color: white;
+    border-color: #4f46e5;
+}
+.generarPago-container .quick-filter-btn.active:hover {
+    background-color: #4338ca; /* hover:bg-indigo-700 */
+}
+
+.generarPago-container.dark .quick-filter-btn.active {
+    background-color: #4f46e5;
+    color: white;
+    border-color: #4f46e5;
+}
+.generarPago-container.dark .quick-filter-btn.active:hover {
+    background-color: #4338ca;
+}
+
+/* --------------------------------------------------------------------------------
+ 19) MODAL DE LISTA DE PRÉSTAMOS (Contenido y Tabla)
+   ---------------------------------------------------------------------------- */
+.generarPago-container .gp-loan-list-modal-content-wrapper {
+    background-color: var(--f-card-background-color, white);
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: var(--f-card-box-shadow, 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04));
+    width: 100%;
+    max-width: 42rem; /* max-w-2xl */
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    /* El color general del texto se hereda de .generarPago-container o .generarPago-container.dark */
+}
+.generarPago-container.dark .gp-loan-list-modal-content-wrapper {
+    background-color: var(--f-card-background-color-dark, #1f2937);
+    box-shadow: var(--f-card-box-shadow-dark, 0 20px 25px -5px rgba(0,0,0,0.4), 0 10px 10px -5px rgba(0,0,0,0.2));
+}
+
+.generarPago-container .gp-loan-list-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--f-input-border-color, #e5e7eb);
+}
+.generarPago-container.dark .gp-loan-list-modal-header {
+    border-bottom-color: var(--f-input-border-color-dark, #374151);
+}
+.generarPago-container .gp-loan-list-modal-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--f-text-color, #374151); /* Color explícito para modo claro */
+}
+.generarPago-container.dark .gp-loan-list-modal-header h3 {
+    color: var(--f-text-color-dark, #d1d5db); /* Color explícito para modo oscuro */
+}
+
+.generarPago-container .gp-loan-list-modal-close-btn {
+    background: transparent;
+    border: none;
+    padding: 0.375rem;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    border-radius: 0.5rem;
+    color: var(--f-icon-color-light, #9ca3af); /* text-gray-400 */
+    cursor: pointer;
+}
+.generarPago-container .gp-loan-list-modal-close-btn:hover { background-color: var(--f-hover-bg-light, #e5e7eb); color: var(--f-text-color, #1f2937); }
+.generarPago-container.dark .gp-loan-list-modal-close-btn { color: var(--f-icon-color-dark, #6b7280); }
+.generarPago-container.dark .gp-loan-list-modal-close-btn:hover { background-color: var(--f-hover-bg-dark, #374151); color: var(--f-text-color-dark-strong, white); }
+
+.generarPago-container .gp-loan-list-modal-body { overflow-y: auto; flex-grow: 1; margin-bottom: 1rem; padding-right: 0.25rem; }
+
+.generarPago-container .gp-loan-list-modal-table { width: 100%; font-size: 0.875rem; text-align: left; }
+
+.generarPago-container .gp-loan-list-modal-table-header {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--f-table-header-bg-light, #f9fafb);
+    color: var(--f-table-header-text-light, #374151);
+}
+.generarPago-container.dark .gp-loan-list-modal-table-header {
+    background-color: var(--f-table-header-bg-dark, #374151);
+    color: var(--f-table-header-text-dark, #e5e7eb);
+}
+
+.generarPago-container .gp-loan-list-modal-table-cell {
+    padding: 0.5rem 1rem;
+    color: var(--f-table-cell-text-light, #1f2937);
+}
+.generarPago-container.dark .gp-loan-list-modal-table-cell {
+    color: var(--f-table-cell-text-dark, #d1d5db);
+}
+
+.generarPago-container .gp-loan-list-modal-table-body { border-top: 1px solid var(--f-input-border-color, #e5e7eb); border-bottom: 1px solid var(--f-input-border-color, #e5e7eb); }
+.generarPago-container.dark .gp-loan-list-modal-table-body { border-color: var(--f-input-border-color-dark, #374151); }
+
+.generarPago-container .gp-loan-list-modal-table-row { background-color: var(--f-table-row-bg-light, white); }
+.generarPago-container.dark .gp-loan-list-modal-table-row { background-color: var(--f-table-row-bg-dark, #1f2937); }
+.generarPago-container .gp-loan-list-modal-table-row-hover:hover { background-color: var(--f-table-row-hover-bg-light, #f9fafb); cursor: pointer; }
+.generarPago-container.dark .gp-loan-list-modal-table-row-hover:hover { background-color: var(--f-table-row-hover-bg-dark, #2c3747); } /* Lighter dark for hover */
+
+/* Estilo para la celda con .font-medium (nombre del cliente) */
+.generarPago-container .gp-loan-list-modal-table-cell.font-medium {
+    font-weight: 500;
+    color: var(--f-text-color, #111827); /* Color del nombre del cliente en modo claro */
+}
+.generarPago-container.dark .gp-loan-list-modal-table-cell.font-medium {
+    color: var(--f-text-color-dark-strong, #ffffff) !important; /* Color del nombre del cliente en modo oscuro (blanco) */
+}
+
+.generarPago-container .gp-loan-list-modal-footer { margin-top: auto; flex-shrink: 0; text-align: right; padding-top: 0.75rem; border-top: 1px solid var(--f-input-border-color, #e5e7eb); }
+.generarPago-container.dark .gp-loan-list-modal-footer { border-top-color: var(--f-input-border-color-dark, #374151); }
+
+/* --------------------------------------------------------------------------------
+ 20) HISTORIAL DE ABONOS (Lista y Items)
+   ---------------------------------------------------------------------------- */
+.generarPago-container .history-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.75rem; }
+
+.generarPago-container .history-list-item {
+    font-size: 0.875rem;
+    padding: 0.5rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    background-color: #f9fafb;
+    color: #374151;
+}
+.generarPago-container.dark .history-list-item {
+    border-color: #4b5563;
+    background-color: #374151;
+    color: #d1d5db;
+}
+.generarPago-container .history-list-item .font-semibold { font-weight: 600; color: #1f2937; }
+.generarPago-container.dark .history-list-item .font-semibold { color: #f3f4f6; }
+.generarPago-container .history-list-item .text-xs { font-size: 0.75rem; color: #6b7280; }
+.generarPago-container.dark .history-list-item .text-xs { color: #9ca3af; }
+
+/* --------------------------------------------------------------------------------
+ 21) BOTÓN HISTORIAL ABONOS (al lado del input "Último Abono")
+   ---------------------------------------------------------------------------- */
+.generarPago-container .historial-btn { /* Hereda de .search-icon-btn */
+    padding: 0.5rem;
+    border-radius: 0.375rem;
+}
+.generarPago-container .historial-btn:hover {
+    background-color: #f3f4f6;
+}
+.generarPago-container.dark .historial-btn:hover {
+    background-color: #374151;
+}
+
+/* --------------------------------------------------------------------------------
+ 22) Ajustes generales para herencia de color en modo oscuro
+   ---------------------------------------------------------------------------- */
+.generarPago-container.dark .text-sm,
+.generarPago-container.dark p,
+.generarPago-container.dark span,
+.generarPago-container.dark strong {
+    color: inherit; /* Asegurar que el texto simple herede el color del modo oscuro */
+}
+.generarPago-container.dark .modal h3 { /* Heredar color del modal */
+    color: inherit;
+}
+.generarPago-container.dark .modal p strong { /* Hacer strong más prominente en modal oscuro */
+    color: var(--f-text-color-dark-strong, #080808); /* Puedes definir esta variable o usar un color directo */
+}

@@ -1,0 +1,13 @@
+[90m= [39m[34;4mApp\Models\User[39;24m {#7248
+    [34mid[39m: [35m22[39m,
+    [34mname[39m: "[32mRonny[39m",
+    [34memail[39m: "[32mronny@ronny.com[39m",
+    [34memail_verified_at[39m: [36mnull[39m,
+    #[33mpassword[39m: "[32m$2y$12$HfUAFO9K9FyipmUmMxfx1O0eeWzWz6sxaPAlW.lBLH4F2DDyGWd4G[39m",
+    #[33mremember_token[39m: "[32mNGOvIRwNJOu8KGGsVFKRHS1UHuQSMCrLRerZqVT4lfburMNRSiq8vnu62yMT[39m",
+    [34mcreated_at[39m: "[32m2025-05-22 11:08:51[39m",
+    [34mupdated_at[39m: "[32m2025-05-22 20:22:09[39m",
+    [34moficina_id[39m: [35m23[39m,
+    [34mdeleted_at[39m: [36mnull[39m,
+  }
+

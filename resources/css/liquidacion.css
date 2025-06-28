@@ -1,0 +1,787 @@
+/* resources/css/liquidacion.css */
+
+:root {
+    --primary-color: #2563eb;
+    --secondary-color: #065f46;
+    --accent-color: #db2777;
+    --bg-light: #f3f4f6; /* light gray background */
+    --bg-dark: #111827; /* dark charcoal background */
+    --text-light: #1f2937; /* dark gray text */
+    --text-dark: #e5e7eb; /* light gray text */
+    --border-light: #d1d5db; /* light gray border */
+    --border-dark: #374151; /* dark gray border */
+    --shadow-color-light: rgba(0, 0, 0, 0.05);
+    --shadow-color-dark: rgba(0, 0, 0, 0.3);
+    --header-bg-light: #e5e7eb; /* slightly darker than bg-light for headers */
+    --header-bg-dark: #1f2937; /* slightly lighter than bg-dark for headers */
+    --input-bg-light: #ffffff; /* white background for inputs in light mode */
+    --input-bg-dark: #1f2937; /* dark background for inputs in dark mode */
+}
+
+/* Existing styles for the main page (keeping them as is) */
+.modal-container { /* This modal-container is for the user list modal */
+    position: relative;
+    background-color: var(--bg-light);
+    border: 1px solid var(--border-light);
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px var(--shadow-color-light);
+    margin-top: 2rem;
+    overflow: visible;
+}
+.dark .modal-container {
+    background-color: var(--bg-dark);
+    border-color: var(--border-dark);
+    box-shadow: 0 4px 6px var(--shadow-color-dark);
+}
+
+.close-btn { /* This close-btn is for the user list modal */
+    position: absolute;
+    top: -0.75rem;
+    right: -0.75rem;
+    font-size: 1rem;
+    color: var(--accent-color);
+    background-color: var(--bg-light);
+    border: 1px solid var(--accent-color);
+    border-radius: 9999px;
+    padding: 0.2rem 0.4rem;
+    box-shadow: 0 2px 4px var(--shadow-color-light);
+    cursor: pointer;
+    transition: transform 0.2s;
+    z-index: 60; /* Added z-index to ensure it's above the modal content */
+}
+.dark .close-btn {
+    background-color: var(--bg-dark);
+    border-color: var(--accent-color);
+    box-shadow: 0 2px 4px var(--shadow-color-dark);
+}
+.close-btn:hover { transform: scale(1.1); }
+
+.users-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+    gap: 0.5rem;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 1rem;
+}
+@media(min-width: 640px) {
+    .users-grid {
+        grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+        gap: 0.75rem;
+        padding: 1.25rem;
+    }
+}
+@media(min-width: 768px) {
+    .users-grid {
+        grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+        gap: 1rem;
+        padding: 1.5rem;
+    }
+}
+
+.user-btn {
+    background-color: var(--bg-light);
+    color: var(--text-light);
+    border: 1px solid var(--border-light);
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    box-shadow: 0 1px 2px var(--shadow-color-light);
+    width: 100%;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 0.875rem;
+}
+.dark .user-btn {
+    background-color: var(--bg-dark);
+    color: var(--text-dark);
+    border-color: var(--border-dark);
+    box-shadow: 0 1px 2px var(--shadow-color-dark);
+}
+.user-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.data-container {
+    background-color: var(--bg-light);
+    border: 1px solid var(--border-light);
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px var(--shadow-color-light);
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    max-width: 100%;
+    overflow-x: auto;
+}
+.dark .data-container {
+    background-color: var(--bg-dark);
+    border-color: var(--border-dark);
+    box-shadow: 0 4px 6px var(--shadow-color-dark);
+}
+
+.info-flex-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+@media(max-width: 640px) {
+    .info-flex-container {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+}
+
+.info-item-container {
+    background-color: var(--bg-light);
+    border: 1px solid var(--border-light);
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    text-align: center;
+    box-shadow: 0 1px 2px var(--shadow-color-light);
+    transition: transform 0.2s;
+    overflow-wrap: break-word;
+}
+.dark .info-item-container {
+    background-color: var(--bg-dark);
+    border-color: var(--border-dark);
+    box-shadow: 0 1px 2px var(--shadow-color-dark);
+}
+.info-item-container:hover { transform: translateY(-2px); }
+
+.info-item-container h3 {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--text-light);
+}
+.dark .info-item-container h3 {
+    color: var(--text-dark);
+}
+
+.info-value {
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--accent-color);
+    line-height: 1.2;
+}
+
+.date-selector-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: center;
+    margin-top: 1.5rem;
+}
+@media(min-width: 640px) {
+    .date-selector-container {
+        flex-direction: row;
+        gap: 1rem;
+    }
+}
+.date-selector-radio-group {
+    display: flex;
+    gap: 1rem;
+}
+.date-selector-radio-label {
+    font-weight: 500;
+    color: var(--text-light);
+    font-size: 0.875rem;
+}
+.dark .date-selector-radio-label {
+    color: var(--text-dark);
+}
+.date-selector-input {
+    border: 1px solid var(--border-light);
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--bg-light);
+    color: var(--text-light);
+    font-size: 0.875rem;
+}
+.dark .date-selector-input {
+    border-color: var(--border-dark);
+    background-color: var(--bg-dark);
+    color: var(--text-dark);
+}
+
+.tab-button {
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-light);
+    background-color: var(--bg-light);
+    color: var(--text-light);
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    cursor: pointer;
+    font-size: 0.875rem;
+}
+.dark .tab-button {
+    border-color: var(--border-dark);
+    background-color: var(--bg-dark);
+    color: var(--text-dark);
+}
+.tab-button:hover {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+.active-tab {
+    background-color: var(--secondary-color) !important;
+    color: white !important;
+    border-color: var(--secondary-color) !important;
+    box-shadow: 0 2px 4px var(--shadow-color-light);
+}
+.active-tab:hover {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 2px 6px var(--shadow-color-light);
+}
+
+
+/* --- New styles for PrestamosEntregadosModal (START) --- */
+
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparente para el fondo */
+    z-index: 40; /* Asegura que esté por encima del contenido principal */
+    display: flex;
+    align-items: center; /* Centra el modal verticalmente */
+    justify-content: center; /* Centra el modal horizontalmente */
+}
+
+/* Modificado para que el modal use las variables CSS */
+.modal-content {
+    background-color: var(--bg-light); /* Usa tu variable para light mode */
+    border-radius: 1rem;
+    box-shadow: 0 20px 25px -5px var(--shadow-color-light), 0 8px 10px -6px rgba(0, 0, 0, 0.1); /* Usa tu variable de sombra */
+    width: 100%;
+    max-width: 80rem; /* Ancho máximo del modal */
+    padding: 1.5rem;
+    position: relative;
+    z-index: 50; /* Por encima del backdrop */
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+}
+.dark .modal-content {
+    background-color: var(--bg-dark); /* Usa tu variable para dark mode */
+    color: var(--text-dark); /* Color de texto general para el modal */
+    box-shadow: 0 20px 25px -5px var(--shadow-color-dark), 0 8px 10px -6px rgba(0, 0, 0, 0.3); /* Sombra para dark mode */
+}
+
+
+.modal-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 1rem;
+    color: var(--text-light);
+    flex-shrink: 0;
+}
+.dark .modal-title {
+    color: var(--text-dark);
+}
+
+.modal-close-button {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--text-light); /* Utiliza la variable para consistencia */
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.2s;
+    z-index: 60;
+}
+.dark .modal-close-button {
+    color: var(--text-dark); /* Utiliza la variable para consistencia */
+}
+.modal-close-button:hover {
+    color: var(--primary-color);
+}
+
+.modal-table-container {
+    overflow-x: auto;
+    max-height: 500px;
+    overflow-y: auto;
+    flex-grow: 1;
+    padding-bottom: 1rem;
+}
+
+.modal-table {
+    min-width: 100%;
+    font-size: 0.875rem;
+    text-align: left;
+    border: 1px solid var(--border-light);
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+.dark .modal-table {
+    border-color: var(--border-dark);
+}
+
+
+.modal-table thead {
+    background-color: var(--header-bg-light); /* Usar nueva variable para thead */
+    color: var(--text-light);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+}
+.dark .modal-table thead {
+    background-color: var(--header-bg-dark); /* Usar nueva variable para thead en dark mode */
+    color: var(--text-dark);
+}
+
+
+.modal-table th {
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid var(--border-light); /* Asegurar borde en th */
+}
+.dark .modal-table th {
+    border-color: var(--border-dark); /* Borde para th en dark mode */
+}
+
+
+.modal-table tbody {
+    border-top: 1px solid var(--border-light);
+}
+.dark .modal-table tbody {
+    border-color: var(--border-dark);
+}
+
+
+.modal-table tr {
+    /* Estilos base para las filas, si los necesitas */
+}
+
+.modal-table td {
+    padding: 0.5rem 1rem;
+    color: var(--text-light);
+}
+.dark .modal-table td {
+    color: var(--text-dark);
+}
+
+.modal-table tbody tr:not(:last-child) {
+    border-bottom: 1px solid var(--border-light);
+}
+.dark .modal-table tbody tr:not(:last-child) {
+    border-bottom: 1px solid var(--border-dark);
+}
+
+
+.modal-empty-message {
+    padding: 1rem;
+    text-align: center;
+    color: var(--text-light);
+}
+.dark .modal-empty-message {
+    color: var(--text-dark);
+}
+
+
+.modal-footer {
+    margin-top: 1rem;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.modal-close-button-footer {
+    background-color: #4b5563;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+    cursor: pointer;
+    border: none;
+}
+.modal-close-button-footer:hover {
+    background-color: #374151;
+}
+/* Estilos específicos para la tarjeta de Total Seguros que contiene el botón */
+.total-seguros-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 0.75rem;
+}
+
+/* Asegura que el área clickeable del valor de Total Seguros no incluya el botón */
+.total-seguros-card > div:first-child {
+    width: 100%;
+    padding-bottom: 0.5rem;
+}
+
+
+/* --- NUEVAS CLASES PARA EL BOTÓN DE BORRAR COMISIONES --- */
+
+.delete-button-wrapper {
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: center;
+    width: 100%;
+}
+
+.delete-commissions-button {
+    font-size: 0.95rem;
+    padding: 0.6rem 1.5rem;
+    min-width: 220px;
+    justify-content: center;
+    text-align: center;
+}
+
+@media (max-width: 640px) {
+    .delete-button-wrapper {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    .delete-commissions-button {
+        width: 100%;
+        min-width: unset;
+    }
+}
+
+/* MODAL DE LIQUIDACIÓN PERSONALIZADO */
+.custom-modal-footer {
+    /* Usar variables para el color de fondo y borde */
+    background-color: var(--bg-light); /* Fondo del footer en light mode */
+    border-top: 1px solid var(--border-light); /* Borde superior en light mode */
+    padding: 1.5rem; /* Ajuste del padding para consistencia */
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 0.75rem; /* Ajuste del gap para consistencia */
+}
+
+.dark .custom-modal-footer {
+    background-color: var(--header-bg-dark); /* Un color que contraste pero no sea el mismo que el modal-content dark */
+    border-top: 1px solid var(--border-dark);
+}
+
+.custom-modal-footer .btn-ajustar,
+.custom-modal-footer .btn-cancelar {
+    min-width: 120px;
+    height: 48px;
+    font-size: 1.125rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px var(--shadow-color-light); /* Usar variable de sombra */
+    padding: 0.5rem 1rem;
+    transition: background-color 0.2s;
+    outline: none;
+}
+.dark .custom-modal-footer .btn-ajustar,
+.dark .custom-modal-footer .btn-cancelar {
+    box-shadow: 0 2px 4px var(--shadow-color-dark); /* Sombra para dark mode */
+}
+
+
+/* Botón AJUSTAR */
+.custom-modal-footer .btn-ajustar {
+    background-color: #03921b; /* Verde fuerte */
+    color: white;
+    border: 1px solid #01571d; /* Borde oscuro para el verde */
+}
+
+.custom-modal-footer .btn-ajustar:hover {
+    background-color: #01571d; /* Verde más oscuro al hover */
+}
+
+/* Botón CANCELAR */
+.custom-modal-footer .btn-cancelar {
+    background-color: #dc2626; /* Rojo de Tailwind red-600 */
+    color: white;
+    border: 1px solid #991b1b; /* Borde oscuro para el rojo */
+}
+
+.custom-modal-footer .btn-cancelar:hover {
+    background-color: #b91c1c; /* Rojo más oscuro al hover */
+}
+
+/* Estilos para el botón de eliminar comisión individual */
+.btn-delete-commission {
+    color: #ef4444;
+    font-size: 1.125rem;
+    font-weight: 700;
+    padding: 0.25rem;
+    border-radius: 9999px;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
+
+.btn-delete-commission:hover {
+    color: #b91c1c;
+}
+
+.btn-delete-commission:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.5);
+}
+
+.table-row-hoverable:hover {
+    background-color: rgba(105, 107, 112, 0.7);
+}
+
+.dark .table-row-hoverable:hover {
+    background-color: rgba(55, 65, 81, 0.7);
+}
+
+/* Estilos para el botón "Guardar Liquidación" */
+.save-liquidation-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    border: 1px solid transparent;
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    opacity: 1;
+    pointer-events: auto;
+    background-color: #07b910; /* bg-primary-600 */
+    color: #ffffff; /* text-white */
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+
+    --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+    --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+    box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+    --tw-ring-color: #06a320; /* ring-primary-200 */
+
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+
+    width: 100%;
+
+    @media (min-width: 640px) {
+        width: auto;
+    }
+}
+
+.save-liquidation-button:hover {
+    background-color: #06d121; /* Un tono más oscuro de azul para el hover */
+}
+
+.save-liquidation-button:disabled {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.modal-button-cancel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-light);
+    color: var(--text-light);
+    background-color: transparent;
+    padding: 0.5rem 1rem;
+    transition: background-color 0.15s ease-out, border-color 0.15s ease-out, color 0.15s ease-out;
+    cursor: pointer;
+}
+
+.modal-button-cancel:hover {
+    background-color: var(--bg-light);
+    border-color: var(--border-light);
+}
+
+.dark .modal-button-cancel {
+    border-color: var(--border-dark);
+    color: var(--text-dark);
+    background-color: transparent; /* Asegurarse que el fondo sea transparente en dark mode */
+}
+
+.dark .modal-button-cancel:hover {
+    background-color: var(--border-dark); /* Un fondo un poco más oscuro para hover en dark mode */
+}
+
+.modal-button-cancel:disabled {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* Nuevas clases para el modal de Guardar Liquidación */
+/* Clases para el fondo del modal (backdrop) */
+.modal-save-liquidation-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparente para el fondo */
+    z-index: 40; /* Asegura que esté por encima del contenido principal */
+}
+
+/* Contenedor principal del modal */
+.modal-save-liquidation-container {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem; /* Padding para móviles */
+}
+
+/* Contenido del modal */
+.modal-save-liquidation-content {
+    background-color: var(--bg-light);
+    border-radius: 0.75rem; /* Ajustado a 0.75rem para consistencia con otros elementos */
+    box-shadow: 0 10px 15px -3px var(--shadow-color-light), 0 4px 6px -2px var(--shadow-color-light);
+    width: 100%;
+    max-width: 36rem; /* Aumentado a un ancho más adecuado para este modal */
+    overflow: hidden; /* Para que el border-radius funcione con el header/footer */
+}
+
+.dark .modal-save-liquidation-content {
+    background-color: var(--bg-dark);
+    box-shadow: 0 10px 15px -3px var(--shadow-color-dark), 0 4px 6px -2px var(--shadow-color-dark);
+}
+
+/* Header del modal */
+.modal-save-liquidation-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem; /* Ajustado el padding */
+    border-bottom: 1px solid var(--border-light);
+    background-color: var(--header-bg-light); /* Fondo para el header */
+}
+
+.dark .modal-save-liquidation-header {
+    border-color: var(--border-dark);
+    background-color: var(--header-bg-dark); /* Fondo para el header en dark mode */
+}
+
+/* Título del modal */
+.modal-save-liquidation-title {
+    font-size: 1.25rem; /* text-xl */
+    font-weight: 600; /* font-semibold */
+    color: var(--text-light);
+}
+
+.dark .modal-save-liquidation-title {
+    color: var(--text-dark);
+}
+
+/* Botón de cerrar (X) */
+.modal-save-liquidation-close-button {
+    color: var(--text-light); /* Color del icono X */
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    border-radius: 0.375rem; /* rounded-md */
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.dark .modal-save-liquidation-close-button {
+    color: var(--text-dark);
+}
+
+.modal-save-liquidation-close-button:hover {
+    background-color: var(--border-light); /* Un ligero fondo al pasar el mouse */
+    color: var(--primary-color);
+}
+.dark .modal-save-liquidation-close-button:hover {
+    background-color: var(--border-dark);
+    color: var(--primary-color);
+}
+
+/* Cuerpo del modal */
+.modal-save-liquidation-body {
+    padding: 1.5rem; /* Ajustado el padding */
+}
+
+/* Label del formulario */
+.modal-save-liquidation-label {
+    display: block;
+    font-size: 0.875rem; /* text-sm */
+    font-weight: 500; /* font-medium */
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+}
+
+.dark .modal-save-liquidation-label {
+    color: var(--text-dark);
+}
+
+/* Input de texto */
+.modal-save-liquidation-input {
+    display: block;
+    width: 100%;
+    padding: 0.625rem 0.75rem; /* py-2.5 px-3 */
+    border-radius: 0.375rem; /* rounded-md */
+    border: 1px solid var(--border-light);
+    background-color: var(--input-bg-light); /* Usar la nueva variable */
+    color: var(--text-light);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.dark .modal-save-liquidation-input {
+    border-color: var(--border-dark);
+    background-color: var(--input-bg-dark); /* Usar la nueva variable para dark mode */
+    color: var(--text-dark);
+}
+
+.modal-save-liquidation-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2); /* ring-primary-200 with opacity */
+    outline: none;
+}
+
+/* Mensajes de error */
+.modal-save-liquidation-error {
+    color: #ef4444; /* Tailwind's red-500 */
+    font-size: 0.75rem; /* text-xs */
+    margin-top: 0.25rem;
+}
+
+/* Footer del modal (botones) */
+.modal-save-liquidation-footer {
+    display: flex;
+    justify-content: flex-end; /* Alinea los botones a la derecha */
+    gap: 0.75rem; /* Espacio entre botones */
+    padding: 1rem 1.5rem; /* Ajustado el padding */
+    border-top: 1px solid var(--border-light);
+    background-color: var(--header-bg-light); /* Fondo para el footer, similar al header */
+}
+
+.dark .modal-save-liquidation-footer {
+    border-color: var(--border-dark);
+    background-color: var(--header-bg-dark); /* Fondo para el footer en dark mode */
+}
+
+/* Botón Cancelar en el footer */
+.modal-save-liquidation-button-cancel {
+    /* Reutiliza .modal-button-cancel */
+    /* Asegúrate de que los estilos específicos aquí no entren en conflicto con el .modal-button-cancel general */
+}
+
+/* Botón Guardar en el footer */
+.modal-save-liquidation-button-save {
+    /* Reutiliza .save-liquidation-button */
+    /* Asegúrate de que los estilos específicos aquí no entren en conflicto con el .save-liquidation-button general */
+}
+
+.background-rojo {
+    background-color: #f75f5f;
+}
+
+/* O una clase personalizada si prefieres */
+.row-repeated-client {
+    background-color: #fd7c7c; /* Otro tono de rojo */
+    border-left: 5px solid #ef4444; /* Un borde rojo a la izquierda */
+}

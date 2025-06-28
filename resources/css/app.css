@@ -1,0 +1,22 @@
+/* resources/css/app.css */
+
+/* Importa tus estilos personalizados para liquidación */
+@import 'liquidacion.css';
+
+/* Importa tus estilos personalizados para Filament */
+/* @import 'custom-filament.css'; ¡Añade esta línea! */
+
+@import 'generarPago.css';
+
+/* Importar las configuraciones de Tailwind */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Variables personalizadas para el tema (en lugar de @theme) */
+:root {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* Agregar tus propias reglas CSS aquí, si es necesario */
