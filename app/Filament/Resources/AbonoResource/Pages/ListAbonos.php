@@ -29,18 +29,26 @@ class ListAbonos extends ListRecords
         }
 
         // Si tiene abonosOficina.index, ve los abonos de préstamos cuyos clientes son de su misma oficina
+        // Y AHORA TAMBIÉN LOS ABONOS DONDE ÉL APARECE COMO registrado_por_id
         if ($user->can('abonosOficina.index')) {
             return static::getResource()::getEloquentQuery()
-                ->whereHas('prestamo.cliente', function ($query) use ($user) {
-                    $query->where('oficina_id', $user->id);
+                ->where(function (Builder $query) use ($user) {
+                    $query->whereHas('prestamo.cliente', function ($subQuery) use ($user) {
+                        $subQuery->where('oficina_id', $user->id);
+                    })
+                    ->orWhere('registrado_por_id', $user->id);
                 });
         }
 
         // Si tiene abonos.view, ve los abonos de préstamos donde él es agente asignado
+        // Y TAMBIÉN LOS ABONOS DONDE ÉL APARECE COMO registrado_por_id
         if ($user->can('abonos.view')) {
             return static::getResource()::getEloquentQuery()
-                ->whereHas('prestamo', function ($query) use ($user) {
-                    $query->where('agente_asignado', $user->id);
+                ->where(function (Builder $query) use ($user) {
+                    $query->whereHas('prestamo', function ($subQuery) use ($user) {
+                        $subQuery->where('agente_asignado', $user->id);
+                    })
+                    ->orWhere('registrado_por_id', $user->id);
                 });
         }
 
