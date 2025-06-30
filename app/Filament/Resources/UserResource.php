@@ -147,7 +147,7 @@ class UserResource extends Resource
                     ->toggleable(),
                 TextColumn::make('email')->label('Correo')->sortable()->searchable()->toggleable(),
                 TextColumn::make('oficina.name')->label('Oficina')->sortable()->searchable()->toggleable(),
-                TextColumn::make('created_at')->label('Fecha de registro')->dateTime()->sortable()->toggleable()->default(false),
+                TextColumn::make('created_at')->label('Fecha de registro')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('roles')

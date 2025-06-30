@@ -39,6 +39,7 @@ class GenerarPago extends Component
     // Control de modales
     public bool $confirmandoAbono = false;
     public bool $refinanciandoPrestamo = false; // Para el modal de refinanciamiento
+    public bool $mostrandoInfoFecha = false; // Para el modal de info de fecha
 
     // Propiedades para el formulario de refinanciamiento
     public $ref_valor = null;
@@ -53,6 +54,7 @@ class GenerarPago extends Component
     public ?Abono $ultimoAbono = null;
     public Collection $historialAbonos;
     public bool $mostrandoHistorialAbonos = false;
+    public ?string $fecha_inicio_real = null; // Para mostrar la fecha de inicio real del préstamo
 
     // Para la lista rápida de préstamos vencidos/al día
     public ?string $activeLoanListType = null; // 'vencidos', 'aldia', o null
@@ -222,6 +224,8 @@ class GenerarPago extends Component
         $this->ultimoAbono = null;
         $this->historialAbonos = collect();
         $this->mostrandoHistorialAbonos = false;
+        $this->mostrandoInfoFecha = false;
+        $this->fecha_inicio_real = null;
         // Resetear lista rápida de préstamos
         $this->activeLoanListType = null;
         $this->loanList = collect();
@@ -337,6 +341,16 @@ class GenerarPago extends Component
             if ($this->prestamo->relationLoaded('abonos')) {
                 $this->ultimoAbono = $this->prestamo->abonos->sortByDesc('created_at')->first();
                 $this->historialAbonos = $this->prestamo->abonos->sortByDesc('created_at');
+            }
+
+            // Cargar fecha de inicio real (para el modal informativo)
+            $this->prestamo->loadMissing('refinanciamientos');
+            $ultimoRefinanciamiento = $this->prestamo->refinanciamientos->sortByDesc('created_at')->first();
+
+            if ($ultimoRefinanciamiento) {
+                $this->fecha_inicio_real = $ultimoRefinanciamiento->created_at->format('d/m/Y H:i');
+            } else {
+                $this->fecha_inicio_real = $this->prestamo->created_at->format('d/m/Y H:i');
             }
 
         } else {
@@ -687,6 +701,11 @@ class GenerarPago extends Component
     public function toggleHistorialAbonos()
     {
         $this->mostrandoHistorialAbonos = !$this->mostrandoHistorialAbonos;
+    }
+
+    public function toggleInfoFecha()
+    {
+        $this->mostrandoInfoFecha = !$this->mostrandoInfoFecha;
     }
 
     // --- Métodos para la lista rápida de Préstamos Vencidos/Al Día ---

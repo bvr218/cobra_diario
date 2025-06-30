@@ -186,9 +186,9 @@
 
                     {{-- Fecha de Pago / Valor de Cuota --}}
                     <div class="form-row-flex">
-                        <div class="form-col-flex">
+                        <div class="form-col-flex" wire:click="toggleInfoFecha" style="cursor: pointer;" title="Ver fecha de inicio">
                             <label>Fecha de Pago</label>
-                            <input type="date" value="{{ $next_payment }}" disabled>
+                            <input type="date" value="{{ $next_payment }}" disabled style="pointer-events: none;">
                         </div>
                         <div class="form-col-flex">
                             <label>Cuota</label>
@@ -381,6 +381,38 @@
                 <div class="modal-buttons mt-auto flex-shrink-0">
                     <button wire:click="toggleHistorialAbonos" class="btn-cancelar w-full">Cerrar</button>
                 </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- ============================================= --}}
+    {{-- MODAL INFO FECHA DE INICIO --}}
+    {{-- ============================================= --}}
+    @if($mostrandoInfoFecha && $prestamo)
+        <div class="modal-overlay" style="display: flex;" x-data @mousedown.outside="$wire.set('mostrandoInfoFecha', false)">
+            <div class="modal" style="max-width: 400px;">
+                {{-- Header --}}
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">Fecha de Inicio del Préstamo</h3>
+                    <button wire:click="toggleInfoFecha" class="modal-close-btn" style="margin-left: auto;">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                {{-- Body --}}
+                <div class="text-center mb-4">
+                    <p class="text-xl font-bold">{{ $fecha_inicio_real }}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        @if($prestamo->refinanciamientos->isNotEmpty())
+                            (Fecha del último refinanciamiento)
+                        @else
+                            (Fecha de creación del préstamo original)
+                        @endif
+                    </p>
+                </div>
+                {{-- Footer --}}
+                <div class="modal-buttons mt-auto"><button wire:click="toggleInfoFecha" class="btn-cancelar w-full">Cerrar</button></div>
             </div>
         </div>
     @endif

@@ -19,16 +19,10 @@ use Filament\Tables\Actions\DeleteBulkAction;
 class HistorialMovimientoResource extends Resource
 {
 
-    public static function canAccess(): bool
-    {
-        return false;
-    }
-
-
     protected static ?string $model = HistorialMovimiento::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
-    protected static ?string $navigationGroup = 'Registros';
+    protected static ?string $navigationGroup = 'Sistema';
     protected static ?string $navigationLabel = 'Historial de Movimientos';
     protected static ?string $modelLabel = 'Movimiento';
 

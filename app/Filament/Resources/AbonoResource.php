@@ -136,6 +136,18 @@ class AbonoResource extends Resource
                     ->toggleable()
                     ->default(false)
                     ->searchable(),
+                TextColumn::make('numero_cuota')
+                    ->label('Número de Cuota')
+                    ->sortable()
+                    ->searchable() 
+                    ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('created_at')
+                    ->label('Fecha de Registro')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                    
             ])->filters([
                 //
             ])->headerActions([

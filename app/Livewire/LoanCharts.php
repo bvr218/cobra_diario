@@ -28,6 +28,11 @@ class LoanCharts extends Component
         'data'   => [],
     ];
 
+    // Propiedades para el modal de lista de préstamos
+    public bool $showLoanListModal = false;
+    public string $modalTitle = '';
+    public \Illuminate\Support\Collection $loanList;
+
     protected $listeners = [
         'updateChartData'     => 'refreshChartData',
         'updateLineChartData' => 'refreshLineChartData',
@@ -40,6 +45,8 @@ class LoanCharts extends Component
 
         $this->anioSeleccionado = $anioSeleccionado ?? date('Y');
         $this->mesSeleccionado  = $mesSeleccionado ?? date('m');
+
+        $this->loanList = collect(); // Inicializar la colección
 
         // Llamar al método unificado al montar
         $this->fetchAllChartsData();
@@ -124,7 +131,7 @@ class LoanCharts extends Component
 
         $baseQuery = Prestamo::whereIn('estado', ['autorizado', 'activo']);
 
-        $prestamos = $this->rolSeleccionado === 'Oficina'
+        $prestamos = $this->rolSeleccionado === 'Oficina' // Cargar con cliente para evitar N+1
             ? $baseQuery->clone()->whereHas('cliente', fn($q) => $q->where('oficina_id', $usuario->id))->get()
             : $baseQuery->clone()->where('agente_asignado', $usuario->id)->get();
 
@@ -149,8 +156,11 @@ class LoanCharts extends Component
         }
         // --- FIN DEPURACIÓN ADICIONAL ---
 
-        $vencidos = $prestamos->filter(fn($p) => $p->next_payment && $p->next_payment->isPast() && !$p->next_payment->isToday())->count();
-        $alDia = $prestamos->filter(fn($p) => $p->next_payment && $p->next_payment->gte(Carbon::today()))->count();
+        // Lógica corregida para Vencidos (hoy o antes) y Al Día (después de hoy)
+        $vencidos = $prestamos->filter(fn($p) => 
+            !$p->next_payment || $p->next_payment->lte(Carbon::today())
+        )->count();
+        $alDia = $prestamos->filter(fn($p) => $p->next_payment && $p->next_payment->gt(Carbon::today()))->count();
 
         $this->pieChartData = [
             'labels' => ['Préstamos Vencidos', 'Préstamos al Día'],
@@ -307,6 +317,51 @@ class LoanCharts extends Component
             'labels' => [],
             'data'   => [],
         ];
+    }
+
+    // ─────── Pie Chart Modal ───────
+
+    public function showLoansByType(string $type): void
+    {
+        if (!$this->usuarioSeleccionadoId || !$this->rolSeleccionado) {
+            return;
+        }
+
+        $usuario = User::find($this->usuarioSeleccionadoId);
+        if (!$usuario) {
+            return;
+        }
+
+        // Eager load the 'cliente' relationship to avoid N+1 query issues in the view.
+        $baseQuery = Prestamo::whereIn('estado', ['autorizado', 'activo'])->with('cliente');
+
+        $prestamos = $this->rolSeleccionado === 'Oficina'
+            ? $baseQuery->clone()->whereHas('cliente', fn($q) => $q->where('oficina_id', $usuario->id))->get()
+            : $baseQuery->clone()->where('agente_asignado', $usuario->id)->get();
+
+        if ($type === 'vencidos') {
+            // Lógica corregida: préstamos cuya fecha de pago es hoy o anterior.
+            $this->loanList = $prestamos->filter(fn($p) => 
+                !$p->next_payment || $p->next_payment->lte(Carbon::today())
+            );
+            $this->modalTitle = 'Préstamos Vencidos';
+        } elseif ($type === 'alDia') {
+            // Lógica corregida: préstamos cuya fecha de pago es posterior a hoy.
+            $this->loanList = $prestamos->filter(fn($p) => $p->next_payment && $p->next_payment->gt(Carbon::today()));
+            $this->modalTitle = 'Préstamos al Día';
+        } else {
+            $this->loanList = collect();
+            $this->modalTitle = '';
+        }
+
+        $this->showLoanListModal = true;
+    }
+
+    public function closeLoanListModal(): void
+    {
+        $this->showLoanListModal = false;
+        $this->loanList = collect();
+        $this->modalTitle = '';
     }
 
     public function render()

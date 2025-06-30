@@ -32,6 +32,16 @@
                                     <th class="px-4 py-2">Cliente</th>
                                     <th class="px-4 py-2">Fecha Refinanciamiento</th>
 
+                                    {{-- **Nueva columna solo en cantidad** --}}
+                                    @if($modalType === 'cantidad')
+                                        <th class="px-4 py-2">Deuda Inicial</th>
+                                    @endif
+
+                                    {{-- **Nueva columna solo en cantidad** --}}
+                                    @if($modalType === 'cantidad')
+                                        <th class="px-4 py-2">Deuda Antes de Refinanciar</th>
+                                    @endif
+
                                     {{-- Valor total --}}
                                     @if($modalType === 'valor_total')
                                         <th class="px-4 py-2">Deuda sin Interés</th>
@@ -50,11 +60,6 @@
                                     {{-- Deuda tras refinanciar (cantidad) --}}
                                     @if($modalType === 'cantidad')
                                         <th class="px-4 py-2">Deuda tras Refinanciar</th>
-                                    @endif
-
-                                    {{-- **Nueva columna solo en cantidad** --}}
-                                    @if($modalType === 'cantidad')
-                                        <th class="px-4 py-2">Préstamo Antes de Refinanciar</th>
                                     @endif
 
                                     {{-- Estado y Acción (solo cantidad) --}}
@@ -76,6 +81,20 @@
                                         <td class="px-4 py-2" wire:click="goToPrestamoEdit({{ $refinanciacion->prestamo_id }})">
                                             {{ $refinanciacion->created_at->format('d/m/Y H:i') }}
                                         </td>
+
+                                        {{-- **Deuda Inicial** --}}
+                                        @if($modalType === 'cantidad')
+                                            <td class="px-4 py-2" wire:click="goToPrestamoEdit({{ $refinanciacion->prestamo_id }})">
+                                                ${{ number_format($refinanciacion->prestamo->deuda_inicial ?? 0, 0, ',', '.') }}
+                                            </td>
+                                        @endif
+
+                                        {{-- **Préstamo Antes de Refinanciar** --}}
+                                        @if($modalType === 'cantidad')
+                                            <td class="px-4 py-2" wire:click="goToPrestamoEdit({{ $refinanciacion->prestamo_id }})">
+                                                ${{ number_format($refinanciacion->deuda_anterior ?? 0, 0, ',', '.') }}
+                                            </td>
+                                        @endif
 
                                         {{-- Valor total --}}
                                         @if($modalType === 'valor_total')
@@ -102,13 +121,6 @@
                                         @if($modalType === 'cantidad')
                                             <td class="px-4 py-2" wire:click="goToPrestamoEdit({{ $refinanciacion->prestamo_id }})">
                                                 ${{ number_format($refinanciacion->deuda_refinanciada_interes, 0, ',', '.') }}
-                                            </td>
-                                        @endif
-
-                                        {{-- **Préstamo Antes de Refinanciar** --}}
-                                        @if($modalType === 'cantidad')
-                                            <td class="px-4 py-2" wire:click="goToPrestamoEdit({{ $refinanciacion->prestamo_id }})">
-                                                ${{ number_format($refinanciacion->deuda_anterior ?? 0, 0, ',', '.') }}
                                             </td>
                                         @endif
 

@@ -47,15 +47,24 @@ class GastoObserver
 
     public function deleted(Gasto $gasto): void
     {
-        // Si el gasto estaba autorizado, NO hacemos nada (no revertimos ni historial)
-        // Si no estaba autorizado, tampoco hacemos nada (no se descontó nada)
+        if ($gasto->autorizado) {
+            $this->ajustarMonto($gasto, $gasto->valor, 'Gasto eliminado', false, true);
+        }
     }
 
-    protected function ajustarMonto(Gasto $gasto, float $monto, string $descripcion, bool $esEdicion = false): void
+    protected function ajustarMonto(Gasto $gasto, float $monto, string $descripcion, bool $esEdicion = false, bool $esEliminacion = false): void
     {
         if ($monto === 0.0) return;
 
-        DB::transaction(function () use ($gasto, $monto, $descripcion, $esEdicion) {
+        $tipoMovimiento = 'creación';
+        if ($esEdicion) {
+            $tipoMovimiento = 'edición';
+        } elseif ($esEliminacion) {
+            $tipoMovimiento = 'eliminación';
+            $monto = -$monto; // Invertir el monto para la eliminación (reembolso)
+        }
+
+        DB::transaction(function () use ($gasto, $monto, $descripcion, $esEdicion, $tipoMovimiento) {
             // Usamos firstOrCreate para evitar race conditions al crear el registro de dinero base.
             // Esto soluciona el error de "Duplicate entry" que puede ocurrir bajo alta concurrencia.
             $dineroBase = DineroBase::firstOrCreate(
@@ -63,6 +72,8 @@ class GastoObserver
                 ['monto' => 0]
             );
 
+            // Un gasto (monto > 0) debe disminuir el dinero base.
+            // Una reversión (monto < 0) debe aumentarlo.
             if ($monto > 0) {
                 $dineroBase->decrement('monto', $monto);
             } else {
@@ -71,7 +82,7 @@ class GastoObserver
 
             HistorialMovimiento::create([
                 'user_id'       => $dineroBase->user_id,
-                'tipo'          => $esEdicion ? 'edición' : 'creación', // Establecer el tipo correctamente
+                'tipo'          => $tipoMovimiento, // Variable ahora disponible en el closure
                 'descripcion'   => $descripcion,
                 'monto'         => $monto,
                 'fecha'         => now(),
