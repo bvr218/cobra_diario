@@ -74,52 +74,52 @@
                             </thead>
                             <tbody>
                                 @foreach($refinanciaciones as $refinanciacion)
-                                    <tr class="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
-                                        <td class="px-4 py-2" wire:click="goToPrestamoEdit({{ $refinanciacion->prestamo_id }})">
+                                    <tr class="cursor-pointer table-row-hoverable" wire:click="goToPrestamoEdit({{ $refinanciacion->prestamo_id }})">
+                                        <td class="px-4 py-2">
                                             {{ $refinanciacion->prestamo->cliente->nombre }}
                                         </td>
-                                        <td class="px-4 py-2" wire:click="goToPrestamoEdit({{ $refinanciacion->prestamo_id }})">
+                                        <td class="px-4 py-2">
                                             {{ $refinanciacion->created_at->format('d/m/Y H:i') }}
                                         </td>
 
                                         {{-- **Deuda Inicial** --}}
                                         @if($modalType === 'cantidad')
-                                            <td class="px-4 py-2" wire:click="goToPrestamoEdit({{ $refinanciacion->prestamo_id }})">
+                                            <td class="px-4 py-2">
                                                 ${{ number_format($refinanciacion->prestamo->deuda_inicial ?? 0, 0, ',', '.') }}
                                             </td>
                                         @endif
 
                                         {{-- **Préstamo Antes de Refinanciar** --}}
                                         @if($modalType === 'cantidad')
-                                            <td class="px-4 py-2" wire:click="goToPrestamoEdit({{ $refinanciacion->prestamo_id }})">
+                                            <td class="px-4 py-2">
                                                 ${{ number_format($refinanciacion->deuda_anterior ?? 0, 0, ',', '.') }}
                                             </td>
                                         @endif
 
                                         {{-- Valor total --}}
                                         @if($modalType === 'valor_total')
-                                            <td class="px-4 py-2" wire:click="goToPrestamoEdit({{ $refinanciacion->prestamo_id }})">
+                                            <td class="px-4 py-2">
                                                 ${{ number_format($refinanciacion->deuda_refinanciada, 0, ',', '.') }}
                                             </td>
                                         @endif
 
                                         {{-- Común cantidad y valor_total --}}
                                         @if($modalType === 'cantidad' || $modalType === 'valor_total')
-                                            <td class="px-4 py-2" wire:click="goToPrestamoEdit({{ $refinanciacion->prestamo_id }})">
+                                            <td class="px-4 py-2">
                                                 ${{ number_format($refinanciacion->valor, 0, ',', '.') }}
                                             </td>
                                         @endif
 
                                         {{-- Valor con interés --}}
                                         @if($modalType === 'valor_interes')
-                                            <td class="px-4 py-2" wire:click="goToPrestamoEdit({{ $refinanciacion->prestamo_id }})">
+                                            <td class="px-4 py-2">
                                                 ${{ number_format($refinanciacion->deuda_refinanciada_interes, 0, ',', '.') }}
                                             </td>
                                         @endif
 
                                         {{-- Deuda tras refinanciar --}}
                                         @if($modalType === 'cantidad')
-                                            <td class="px-4 py-2" wire:click="goToPrestamoEdit({{ $refinanciacion->prestamo_id }})">
+                                            <td class="px-4 py-2">
                                                 ${{ number_format($refinanciacion->deuda_refinanciada_interes, 0, ',', '.') }}
                                             </td>
                                         @endif

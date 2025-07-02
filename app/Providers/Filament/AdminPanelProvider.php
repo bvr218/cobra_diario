@@ -38,7 +38,7 @@ class AdminPanelProvider extends PanelProvider
                     return ucfirst($user->roles()->first()->name); // Ej: "Admin"
                 }
 
-                return 'Laravel'; // Valor por defecto si no hay usuario
+                return 'Cobra Diario'; // Valor por defecto si no hay usuario
             })
             ->colors([
                 'primary' => Color::Amber,

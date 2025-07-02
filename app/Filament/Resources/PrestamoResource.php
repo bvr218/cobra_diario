@@ -242,7 +242,7 @@ class PrestamoResource extends Resource
                         $reg   = $record->registrado;
                         $img   = $c->foto_cliente
                             ? asset('storage/' . $c->foto_cliente)
-                            : '/storage/avatar-default.jpg';
+                            : '/storage/avatar-default.jpeg';
 
                         $deuda             = $record->deuda_actual;
                         $estadoPrestamo    = '';

@@ -8,39 +8,29 @@ use App\Models\User;
 use App\Models\HistorialMovimiento;
 use Illuminate\Support\Facades\DB;
 use App\Notifications\NuevaNotificacion;
-use Illuminate\Support\Facades\Log; // Added for logging
+use Illuminate\Support\Facades\Log;
 
 class AbonoObserver
 {
     /**
      * Handle the Abono "created" event.
-     * Al crear un abono, ajustamos dinero_base y restamos de monto_general.
+     * Al crear un abono, solo ajustamos dinero_base.
      */
     public function created(Abono $abono): void
     {
         // 1. Ajuste de dinero_base (el monto abono se suma al dinero base del cobrador)
         $this->ajustarDineroBase($abono->registrado_por_id, $abono->monto_abono);
 
-        // 2. Ajuste de monto_general (el monto abono se resta del monto general)
-        $this->actualizarMontoGeneral($abono->registrado_por_id, -$abono->monto_abono, $abono->id);
-
-        // 3. Historial de creación para dinero_base
+        // 2. Historial de creación para dinero_base
         $this->registrarMovimiento(
             $abono,
             'creado',
             $abono->monto_abono, // Monto para dinero_base (positivo)
             'dinero_base'
         );
-        // 4. Historial de creación para monto_general
-        $this->registrarMovimiento(
-            $abono,
-            'creado',
-            -$abono->monto_abono, // Monto para monto_general (negativo)
-            'monto_general',
-            "Reducción por abono de {$abono->monto_abono} para préstamo {$abono->prestamo->id}"
-        );
+        // NOTA: Se ha eliminado el ajuste y el historial para monto_general aquí.
 
-        // 5. Notificación de préstamo por terminar (lógica existente)
+        // 3. Notificación de préstamo por terminar (lógica existente)
         if ($abono->prestamo && $abono->deuda_actual < ($abono->prestamo->valor_total_prestamo * 0.7)) {
             $admins = User::whereHas("roles", fn($q) => $q->where("roles.name", "admin"))->get();
             foreach ($admins as $admin) {
@@ -57,7 +47,7 @@ class AbonoObserver
 
     /**
      * Handle the Abono "updated" event.
-     * Al actualizar un abono, ajustamos dinero_base y monto_general si el monto cambia.
+     * Al actualizar un abono, ajustamos dinero_base si el monto cambia.
      */
     public function updated(Abono $abono): void
     {
@@ -74,7 +64,7 @@ class AbonoObserver
             }
         }
 
-        // Detectamos cambios específicos en monto_abono
+        // Detectamos cambios específicos en monto_abono para ajustar dinero_base
         if ($abono->isDirty('monto_abono')) {
             $originalMonto = (float) $abono->getOriginal('monto_abono');
             $nuevoMonto = (float) $abono->monto_abono;
@@ -91,17 +81,7 @@ class AbonoObserver
                     'dinero_base',
                     "Ajuste en dinero base por edición de abono. Antes: {$originalMonto}, Después: {$nuevoMonto}"
                 );
-
-                // 2. Ajustar monto_general: se resta la diferencia (si el nuevo monto es mayor, se "cobra" más, por lo tanto se resta más del monto_general)
-                $this->actualizarMontoGeneral($abono->registrado_por_id, -$diferencia, $abono->id);
-                // Historial de edición para monto_general
-                $this->registrarMovimiento(
-                    $abono,
-                    'actualizado',
-                    -$diferencia,
-                    'monto_general',
-                    "Ajuste en monto general por edición de abono. Antes: {$originalMonto}, Después: {$nuevoMonto}"
-                );
+                // NOTA: Se ha eliminado el ajuste y el historial para monto_general aquí.
             }
         } else {
             // Si otros campos cambian (sin ajuste de dinero), solo registramos edición general
@@ -112,7 +92,7 @@ class AbonoObserver
 
     /**
      * Handle the Abono "deleted" event.
-     * Al eliminar un abono, revertimos los cambios en dinero_base y monto_general.
+     * Al eliminar un abono, solo revertimos los cambios en dinero_base.
      */
     public function deleted(Abono $abono): void
     {
@@ -126,22 +106,12 @@ class AbonoObserver
             'dinero_base',
             "Reversión de dinero base por eliminación de abono."
         );
-
-        // 2. Revertir monto_general: se suma el monto del abono eliminado (porque lo "cobrado" se vuelve a "deber")
-        $this->actualizarMontoGeneral($abono->registrado_por_id, $abono->monto_abono, $abono->id);
-        // Historial de eliminación para monto_general
-        $this->registrarMovimiento(
-            $abono,
-            'eliminado',
-            $abono->monto_abono, // Monto positivo para monto_general (se vuelve a sumar a la deuda a cobrar)
-            'monto_general',
-            "Reversión de monto general por eliminación de abono."
-        );
+        // NOTA: Se ha eliminado el ajuste y el historial para monto_general aquí.
     }
 
     /**
      * Handle the Abono "restored" event.
-     * Al restaurar un abono, volvemos a aplicar los cambios en dinero_base y monto_general.
+     * Al restaurar un abono, volvemos a aplicar los cambios en dinero_base.
      */
     public function restored(Abono $abono): void
     {
@@ -150,22 +120,12 @@ class AbonoObserver
         // Historial de restauración para dinero_base
         $this->registrarMovimiento(
             $abono,
-            'restaurado', // Nuevo tipo de acción para el historial
+            'restaurado',
             $abono->monto_abono,
             'dinero_base',
             "Restauración de dinero base por abono."
         );
-
-        // 2. Ajuste de monto_general: se resta el monto abono (vuelve a reducir la deuda a cobrar)
-        $this->actualizarMontoGeneral($abono->registrado_por_id, -$abono->monto_abono, $abono->id);
-        // Historial de restauración para monto_general
-        $this->registrarMovimiento(
-            $abono,
-            'restaurado', // Nuevo tipo de acción para el historial
-            -$abono->monto_abono,
-            'monto_general',
-            "Restauración de monto general por abono."
-        );
+        // NOTA: Se ha eliminado el ajuste y el historial para monto_general aquí.
     }
 
     /**
@@ -174,10 +134,9 @@ class AbonoObserver
      */
     public function forceDeleted(Abono $abono): void
     {
-        // Simplemente llama al método deleted para aplicar la misma lógica de reversión
+        // Simplemente llama al método deleted para aplicar la misma lógica de reversión (ahora solo para dinero_base)
         $this->deleted($abono);
     }
-
 
     /**
      * Ajusta el dinero base del usuario.
@@ -199,7 +158,6 @@ class AbonoObserver
             if ($monto > 0) {
                 $dineroBase->increment('monto', $monto);
             } else {
-                // Usamos abs() para asegurar que la cantidad restada sea positiva
                 $dineroBase->decrement('monto', abs($monto));
             }
         });
@@ -207,10 +165,9 @@ class AbonoObserver
     }
 
     /**
-     * Actualiza el monto_general de un usuario.
-     * @param int $userId El ID del usuario cuyo monto general será ajustado.
-     * @param float $montoImpacto El monto a sumar o restar de monto_general.
-     * @param int|null $abonoId ID del abono para el log.
+     * El método actualizarMontoGeneral ya no es llamado por los eventos de Abono.
+     * Lo dejo aquí por si otras partes de tu aplicación aún lo usan,
+     * pero su función ya no está ligada directamente a la creación/edición/eliminación de Abonos.
      */
     protected function actualizarMontoGeneral(int $userId, float $montoImpacto, ?int $abonoId = null): void
     {
@@ -221,10 +178,9 @@ class AbonoObserver
         DB::transaction(function () use ($userId, $montoImpacto, $abonoId) {
             $dineroBase = DineroBase::firstOrCreate(
                 ['user_id' => $userId],
-                ['monto' => 0, 'monto_general' => 0] // Aseguramos que monto también se inicialice
+                ['monto' => 0, 'monto_general' => 0]
             );
 
-            // Siempre usamos increment, el signo de $montoImpacto determinará si suma o resta
             $dineroBase->increment('monto_general', $montoImpacto);
         });
         Log::info("Monto General ajustado para User ID: {$userId} por impacto: {$montoImpacto}. Abono ID: {$abonoId}.");
@@ -232,10 +188,7 @@ class AbonoObserver
 
     /**
      * La lógica de revertirAbono original es para dinero_base, y tiene una lógica de cascada (usuario -> oficina -> admin).
-     * Para monto_general, no necesitamos esta cascada, solo un ajuste directo.
-     * Por eso he creado `actualizarMontoGeneral` para el monto_general.
-     * Si `revertirAbono` sigue siendo necesaria para la lógica de cascada del dinero_base, la dejamos como está.
-     * En este refactor, `revertirAbono` solo se usa en `deleted` para la lógica de dinero_base.
+     * Sigue siendo necesaria para la reversión del dinero_base al eliminar un abono.
      */
     protected function revertirAbono(int $userId, float $monto): void
     {
@@ -249,12 +202,11 @@ class AbonoObserver
 
             // Revertir del dinero base del usuario
             if ($user && $user->dineroBase) {
-                $saldo = $user->dineroBase->monto; // No usar max(0, ..) aquí si el monto puede ser negativo en casos extremos
+                $saldo = $user->dineroBase->monto;
                 if ($saldo >= $faltante) {
                     $user->dineroBase->decrement('monto', $faltante);
                     return; // Terminamos si se cubrió todo
                 }
-                // Si el saldo no es suficiente, se reduce a 0 y se calcula el restante
                 $user->dineroBase->update(['monto' => 0]);
                 $faltante -= $saldo;
             }
@@ -277,7 +229,6 @@ class AbonoObserver
             if ($faltante > 0) {
                 $admin = User::role('admin')->whereHas('dineroBase')->first();
                 if ($admin && $admin->dineroBase) {
-                    // Resta directamente, no hay necesidad de más cascadas
                     $admin->dineroBase->decrement('monto', $faltante);
                 } else {
                     Log::warning("AbonoObserver@revertirAbono: No se pudo encontrar un admin con dineroBase para revertir el faltante de {$faltante}.");
@@ -290,9 +241,9 @@ class AbonoObserver
      * Registra en HistorialMovimiento un único registro.
      *
      * @param Abono $abono
-     * @param string $accion      'creado'|'actualizado'|'eliminado'|'restaurado'
-     * @param float $monto       Monto aplicado (positivo o negativo)
-     * @param string $impacto_en  'dinero_base'|'monto_general'|'general'
+     * @param string $accion       'creado'|'actualizado'|'eliminado'|'restaurado'
+     * @param float $monto         Monto aplicado (positivo o negativo)
+     * @param string $impacto_en   'dinero_base'|'monto_general'|'general'
      * @param string|null $descripcion_extra Descripción adicional para el historial.
      */
     protected function registrarMovimiento(
@@ -302,20 +253,25 @@ class AbonoObserver
         string $impacto_en,
         string $descripcion_extra = null
     ): void {
-        // Mapear acción a tipo
+        // Si el impacto no es en dinero_base, y no es un registro general que cubra otros campos,
+        // simplemente no registramos para evitar registros de monto_general.
+        if ($impacto_en !== 'dinero_base' && $impacto_en !== 'general') {
+            return;
+        }
+
         $tipo = match ($accion) {
             'creado'      => 'creación',
             'actualizado' => 'edición',
             'eliminado'   => 'eliminación',
-            'restaurado'  => 'restauración', // Nuevo tipo
+            'restaurado'  => 'restauración',
             default       => 'desconocido',
         };
 
         $baseDescripcion = "Abono ID: {$abono->id}. Cliente: " . ($abono->prestamo->cliente->nombre ?? 'desconocido') . ". Préstamo ID: {$abono->prestamo_id}. Cuota: {$abono->numero_cuota}.";
         $descripcion = match ($impacto_en) {
             'dinero_base' => "{$baseDescripcion} Impacto en Dinero Base.",
-            'monto_general' => "{$baseDescripcion} Impacto en Monto General.",
-            default => $baseDescripcion . ($descripcion_extra ? " " . $descripcion_extra : ""), // Para 'general' o otros casos
+            'monto_general' => "{$baseDescripcion} Impacto en Monto General.", // Esta rama podría eliminarse si nunca se usa, pero la mantengo si 'monto_general' se pasa desde otro lugar no relacionado con abonos
+            default => $baseDescripcion . ($descripcion_extra ? " " . $descripcion_extra : ""),
         };
         if ($descripcion_extra) {
             $descripcion .= " " . $descripcion_extra;
@@ -333,7 +289,8 @@ class AbonoObserver
         ];
 
         // Para ediciones, si es necesario, capturar los cambios específicos
-        if ($tipo === 'edición' && $impacto_en !== 'general') { // Solo si es una edición con impacto específico
+        // Solo para dinero_base ahora
+        if ($tipo === 'edición' && $impacto_en === 'dinero_base') {
             $original = (float) $abono->getOriginal('monto_abono');
             $nuevo = (float) $abono->monto_abono;
             $data['cambio_desde'] = json_encode(['monto_abono' => $original]);

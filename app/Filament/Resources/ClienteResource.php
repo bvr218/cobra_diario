@@ -187,7 +187,7 @@ class ClienteResource extends Resource
                     ->formatStateUsing(function ($record) {
                         $imagen = $record->foto_cliente
                             ? asset('storage/' . $record->foto_cliente)
-                            : url('/storage/avatar-default.jpg');
+                            : url('/storage/avatar-default.jpeg');
 
                         $html = '
                             <div class="flex items-center space-x-4">

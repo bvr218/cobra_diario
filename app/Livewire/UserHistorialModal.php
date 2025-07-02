@@ -11,6 +11,7 @@ class UserHistorialModal extends Component
 {
     public $user;
     public Collection $prestamosRegistrados;
+    public float $totalDeudaActual = 0;
 
     // Propiedad para el mensaje de estado (opcional, si lo necesitas en el modal)
     public string $estadoMensaje = '';
@@ -30,8 +31,9 @@ class UserHistorialModal extends Component
     {
         // Carga solo los préstamos donde este usuario es el 'registrado_id'
         $this->prestamosRegistrados = $this->user->prestamos // Cargar la relación del cliente para el nombre
-                                            
                                             ->sortByDesc('created_at'); // Ordenar por fecha de creación del préstamo
+
+        $this->totalDeudaActual = $this->prestamosRegistrados->sum('deuda_actual');
     }
 
     public function render()

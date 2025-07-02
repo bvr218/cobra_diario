@@ -36,6 +36,12 @@ class GenerarPago extends Component
     // Para la descripción del cliente
     public ?string $cliente_descripcion = null;
 
+    // Para la edición de datos del cliente
+    public bool $editandoCliente = false;
+    public ?string $edit_cliente_nombre = null;
+    public ?string $edit_cliente_direccion = null;
+    public ?string $edit_cliente_telefono = null;
+
     // Control de modales
     public bool $confirmandoAbono = false;
     public bool $refinanciandoPrestamo = false; // Para el modal de refinanciamiento
@@ -70,6 +76,9 @@ class GenerarPago extends Component
             'ref_interes'         => 'required|numeric|min:0',
             'ref_comicion'        => 'required|numeric|min:0',
             'ref_descripcion_cliente' => 'nullable|string|max:255',
+            'edit_cliente_nombre'    => 'required|string|max:255',
+            'edit_cliente_direccion' => 'nullable|string|max:255',
+            'edit_cliente_telefono'  => 'required|string|max:20',
         ];
     }
 
@@ -91,6 +100,8 @@ class GenerarPago extends Component
             'ref_comicion.numeric'      => 'La comisión debe ser numérica.',
             'ref_comicion.min'          => 'La comisión no puede ser negativa.',
             'ref_descripcion_cliente.max' => 'La descripción no puede exceder los 255 caracteres.',
+            'edit_cliente_nombre.required' => 'El nombre del cliente es obligatorio.',
+            'edit_cliente_telefono.required' => 'El teléfono del cliente es obligatorio.',
         ];
     }
 
@@ -229,6 +240,7 @@ class GenerarPago extends Component
         // Resetear lista rápida de préstamos
         $this->activeLoanListType = null;
         $this->loanList = collect();
+        $this->cancelarEdicionCliente();
     }
 
     /**
@@ -275,6 +287,9 @@ class GenerarPago extends Component
 
 
     public function loadByPosition($preserveSearchTerm = false) {
+        // Asegurarse de que el modo de edición se cancele al cambiar de préstamo.
+        $this->cancelarEdicionCliente();
+
         // Asegurarse de que la colección de préstamos filtrados esté cargada
         if (!isset($this->allFilteredLoans)) {
             $this->loadAndFilterLoansCollection();
@@ -774,6 +789,57 @@ class GenerarPago extends Component
         }
 
         $this->closeLoanListModal(); // Cierra el modal y limpia sus variables asociadas.
+    }
+
+    // --- Métodos para Edición de Cliente ---
+
+    public function toggleEdicionCliente()
+    {
+        if (!$this->prestamo || !$this->prestamo->cliente) {
+            return;
+        }
+
+        $this->editandoCliente = true;
+        $this->edit_cliente_nombre = $this->prestamo->cliente->nombre;
+        $this->edit_cliente_direccion = $this->prestamo->cliente->direccion;
+        // El campo 'telefonos' es un array en el modelo Cliente
+        $this->edit_cliente_telefono = $this->prestamo->cliente->telefonos[0] ?? null;
+    }
+
+    public function guardarEdicionCliente()
+    {
+        if (!$this->prestamo || !$this->prestamo->cliente) {
+            return;
+        }
+
+        $this->validate([
+            'edit_cliente_nombre'    => 'required|string|max:255',
+            'edit_cliente_direccion' => 'nullable|string|max:255',
+            'edit_cliente_telefono'  => 'required|string|max:20',
+        ]);
+
+        try {
+            $cliente = $this->prestamo->cliente;
+            $cliente->update([
+                'nombre'    => $this->edit_cliente_nombre,
+                'direccion' => $this->edit_cliente_direccion,
+                'telefonos' => [$this->edit_cliente_telefono], // Guardar como un array
+            ]);
+
+            session()->flash('success', 'Datos del cliente actualizados correctamente.');
+            $this->cancelarEdicionCliente(); // Cierra el formulario y resetea
+            $this->loadByPosition(true); // Recarga los datos para reflejar el cambio
+        } catch (\Exception $e) {
+            \Log::error("Error al actualizar datos del cliente: " . $e->getMessage());
+            session()->flash('error', 'Hubo un error al actualizar los datos del cliente.');
+        }
+    }
+
+    public function cancelarEdicionCliente()
+    {
+        $this->editandoCliente = false;
+        $this->reset(['edit_cliente_nombre', 'edit_cliente_direccion', 'edit_cliente_telefono']);
+        $this->resetErrorBag(); // Limpiar errores de validación si los hubo
     }
 
     public function render()

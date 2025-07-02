@@ -265,12 +265,46 @@
                             $telefonoUrl = $telefono ? preg_replace('/[^0-9]/', '', $telefono) : null;
                         @endphp
 
-                        <a @if($telefonoUrl) href="https://wa.me/{{ $telefonoUrl }}" target="_blank" rel="noopener noreferrer" title="Chatear en WhatsApp" @endif
-                           class="block p-1 rounded-md @if($telefonoUrl) hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer @else cursor-default @endif">
-                            <p class="text-sm font-semibold">{{ $prestamo->cliente->nombre }}</p>
-                            <p class="text-xs">CC: {{ $prestamo->cliente->numero_cedula ?? 'N/A' }}</p>
-                            <p class="text-xs">Tel: {{ $telefonoRaw ?? 'N/A' }}</p>
-                        </a>
+                        {{-- Condicional para mostrar vista o formulario de edición --}}
+                        @if($editandoCliente)
+                            {{-- Formulario de Edición --}}
+                            <form wire:submit.prevent="guardarEdicionCliente" class="mt-2 text-left space-y-2" novalidate>
+                                <div>
+                                    <label for="edit_nombre" class="block text-xs font-medium text-gray-700 dark:text-gray-300">Nombre</label>
+                                    <input id="edit_nombre" type="text" wire:model.defer="edit_cliente_nombre" class="w-full p-1 border rounded-md text-sm dark:bg-gray-700 dark:border-gray-600">
+                                    @error('edit_cliente_nombre') <span class="validation-error text-xs">{{ $message }}</span> @enderror
+                                </div>
+                                <div>
+                                    <label for="edit_direccion" class="block text-xs font-medium text-gray-700 dark:text-gray-300">Dirección</label>
+                                    <input id="edit_direccion" type="text" wire:model.defer="edit_cliente_direccion" class="w-full p-1 border rounded-md text-sm dark:bg-gray-700 dark:border-gray-600">
+                                    @error('edit_cliente_direccion') <span class="validation-error text-xs">{{ $message }}</span> @enderror
+                                </div>
+                                <div>
+                                    <label for="edit_telefono" class="block text-xs font-medium text-gray-700 dark:text-gray-300">Teléfono</label>
+                                    <input id="edit_telefono" type="text" wire:model.defer="edit_cliente_telefono" class="w-full p-1 border rounded-md text-sm dark:bg-gray-700 dark:border-gray-600">
+                                    @error('edit_cliente_telefono') <span class="validation-error text-xs">{{ $message }}</span> @enderror
+                                </div>
+                                <div class="flex justify-end space-x-2 mt-2">
+                                    <button type="button" wire:click.prevent="cancelarEdicionCliente" class="btn-cancelar text-xs px-2 py-1">Cancelar</button>
+                                    <button type="submit" class="btn-confirmar text-xs px-2 py-1">Guardar</button>
+                                </div>
+                            </form>
+                        @else
+                            {{-- Vista de Información (Click para editar) --}}
+                            <div wire:click="toggleEdicionCliente" class="block p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer" title="Clic para editar">
+                                <p class="text-sm font-semibold">{{ $prestamo->cliente->nombre }}</p>
+                                <p class="text-xs">CC: {{ $prestamo->cliente->numero_cedula ?? 'N/A' }}</p>
+                                <p class="text-xs">Tel: {{ $telefonoRaw ?? 'N/A' }}</p>
+                                <p class="text-xs">Dir: {{ $prestamo->cliente->direccion ?? 'N/A' }}</p>
+                            </div>
+
+                            {{-- Botón de WhatsApp --}}
+                            @if($telefonoUrl)
+                                <a href="https://wa.me/{{ $telefonoUrl }}" target="_blank" rel="noopener noreferrer" title="Chatear en WhatsApp" class="inline-block mt-2 transition-transform duration-200 ease-in-out hover:scale-120">
+                                    <img src="{{ asset('storage/icono-whatsapp-sin-fondo.png') }}" alt="WhatsApp" style="width: 40px; height: 40px;">
+                                </a>
+                            @endif
+                        @endif
                     @endif
                 </div>
                 <button class="nav-btn" wire:click="next" @disabled($totalPrestamos === 0)>

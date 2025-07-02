@@ -89,6 +89,17 @@
                             </tr>
                         @endforeach
                     </tbody>
+                    <tfoot>
+                        <tr class="bg-gray-100 dark:bg-gray-700 font-semibold text-gray-900 dark:text-white">
+                            <td colspan="2" class="px-6 py-4 text-right">Total Deuda Actual:</td>
+                            <td class="px-6 py-4">
+                                <span class="text-red-600 dark:text-red-400 font-bold">
+                                    ${{ number_format($totalDeudaActual, 0, ',', '.') }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4"></td> {{-- Celda vacía para la columna de Estado --}}
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
         @endif
