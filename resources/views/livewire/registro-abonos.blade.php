@@ -99,7 +99,7 @@
 
                 <div class="info-flex-container">
                     {{-- Dinero Inicial --}}
-                    <div class="info-item-container">
+                    <div class="info-item-container" title="Monto base con el que el usuario inicia sus operaciones.">
                         <h3>Dinero Inicial</h3>
                         <span class="info-value">
                             $<span x-data="{ amount: @js($dineroInicialDelUsuario) }"
@@ -108,7 +108,7 @@
                     </div>
 
                     {{-- Dinero Capital --}}
-                    <div class="info-item-container">
+                    <div class="info-item-container" title="Dinero total disponible para el usuario, incluyendo el monto inicial y ajustes.">
                         <h3>Dinero Capital</h3>
                         <span class="info-value">
                             $<span x-data="{ amount: @js($dineroCapital) }"
@@ -118,7 +118,7 @@
 
                     {{-- Dinero en Caja --}}
                     <div class="info-item-container cursor-pointer"
-                         wire:click="openTransferenciaDineroEnManoModal">
+                         wire:click="openTransferenciaDineroEnManoModal" title="Dinero físico que el agente debería tener. Se puede transferir desde/hacia el dinero en mano.">
                         <h3>Dinero en Caja</h3>
                         <span class="info-value">
                             $<span x-data="{ amount: @js($dineroEnMano) }"
@@ -128,7 +128,7 @@
 
                     {{-- Préstamos Entregados --}}
                     <div wire:click="abrirModalPrestamosEntregadosClick"
-                         class="info-item-container cursor-pointer">
+                         class="info-item-container cursor-pointer" title="Cantidad de préstamos autorizados/activos en el período. (Entre paréntesis: préstamos pendientes de aprobación).">
                         <h3>Préstamos Entregados</h3>
                         <span class="info-value">
                             {{ $prestamosEntregados }} ({{ $prestamosPendientes }})
@@ -137,7 +137,7 @@
 
                     {{-- Total Prestado --}}
                     <div wire:click="abrirModalTotalPrestadoClick"
-                         class="info-item-container cursor-pointer">
+                         class="info-item-container cursor-pointer" title="Suma total del capital prestado en el período seleccionado, sin incluir intereses.">
                         <h3>Total Prestado</h3>
                         <span class="info-value">
                             ${{ number_format($totalPrestado, 0, ',', '.') }}
@@ -146,7 +146,7 @@
 
                     {{-- Total Prestado (Con Interés) --}}
                     <div wire:click="abrirModalTotalPrestadoConInteresClick"
-                         class="info-item-container cursor-pointer">
+                         class="info-item-container cursor-pointer" title="Suma total del valor de los préstamos en el período, incluyendo los intereses.">
                         <h3>Total Prestado (Con Interés)</h3>
                         <span class="info-value">
                             ${{ number_format($totalPrestadoConInteres, 0, ',', '.') }}
@@ -155,7 +155,7 @@
 
                     {{-- Cantidad de Refinanciaciones --}}
                     <div wire:click="abrirModalCantidadRefinanciacionesClick"
-                         class="info-item-container cursor-pointer">
+                         class="info-item-container cursor-pointer" title="Cantidad de refinanciaciones autorizadas en el período. (Entre paréntesis: refinanciaciones pendientes de aprobación).">
                         <h3>Cantidad de Refinanciaciones</h3>
                         <span class="info-value">
                             {{ $cantidadRefinanciaciones }} ({{ $cantidadRefinanciacionesPendientes }})
@@ -164,7 +164,7 @@
 
                     {{-- Valor Total de Refinanciaciones --}}
                     <div wire:click="abrirModalValorTotalRefinanciacionesClick"
-                         class="info-item-container cursor-pointer">
+                         class="info-item-container cursor-pointer" title="Suma de la deuda anterior que se refinanció. (Entre paréntesis: monto de dinero nuevo añadido en las refinanciaciones).">
                         <h3>Valor Total de Refinanciaciones</h3>
                         <span class="info-value">
                             $<span x-data="{ amount: @js($deudaRefinanciadaTotal) }"
@@ -175,7 +175,7 @@
 
                     {{-- Valor de Refinanciaciones (Con Interés) --}}
                     <div wire:click="abrirModalValorRefinanciacionesConInteresClick"
-                         class="info-item-container cursor-pointer">
+                         class="info-item-container cursor-pointer" title="Suma total del valor de las refinanciaciones, incluyendo los intereses.">
                         <h3>Valor de Refinanciaciones (Con Interés)</h3>
                         <span class="info-value">
                             $<span x-data="{ amount: @js($deudaRefinanciadaInteresTotal) }"
@@ -185,7 +185,7 @@
 
                     {{-- Total Seguros --}}
                     <div wire:click="abrirModalComisionesRegistradasClick"
-                         class="info-item-container cursor-pointer">
+                         class="info-item-container cursor-pointer" title="Suma de todos los seguros (comisiones) cobrados en el período seleccionado.">
                         <h3>Total Seguros</h3>
                         <span class="info-value">
                             ${{ number_format($totalComision, 0, ',', '.') }}
@@ -194,16 +194,16 @@
 
                     {{-- Recaudos Realizados --}}
                     <div wire:click="abrirModalRecaudosRealizadosClick"
-                         class="info-item-container cursor-pointer">
+                         class="info-item-container cursor-pointer" title="Cantidad de abonos recibidos en el período. (Entre paréntesis: total de préstamos históricos asignados a este agente).">
                         <h3>Recaudos Realizados</h3>
                         <span class="info-value">
-                            {{ $cantidadRecaudosRealizados }}
+                            {{ $cantidadRecaudosRealizados }} ({{ $totalPrestamosAsignados }})
                         </span>
                     </div>
 
                     {{-- Dinero Recaudado --}}
                     <div wire:click="abrirModalDineroRecaudadoClick"
-                         class="info-item-container cursor-pointer">
+                         class="info-item-container cursor-pointer" title="Suma total del dinero recaudado a través de abonos en el período seleccionado.">
                         <h3>Dinero Recaudado</h3>
                         <span class="info-value">
                             $<span x-data="{ amount: @js($dineroRecaudado) }"
@@ -213,7 +213,7 @@
 
                     {{-- Gastos --}}
                     <div wire:click="abrirModalGastosAutorizadosClick"
-                         class="info-item-container cursor-pointer">
+                         class="info-item-container cursor-pointer" title="Suma de gastos autorizados. (Entre paréntesis: suma de gastos pendientes de autorizar).">
                         <h3>Gastos</h3>
                         <span class="info-value">
                             $<span x-data="{ amount: @js($gastosAutorizados) }"
@@ -224,7 +224,7 @@
                     </div>
 
                     {{-- Dinero en Mano Final --}}
-                    <div class="info-item-container">
+                    <div class="info-item-container" title="Balance final calculado: (Dinero Inicial + Recaudado) - (Total Prestado + Gastos Autorizados). Este es el dinero que el agente debe entregar.">
                         <h3>Dinero en Mano</h3>
                         <span class="info-value"
                               style="color: {{ $dineroEnCaja < 0 ? 'var(--accent-color)' : 'var(--secondary-color)' }}">

@@ -15,6 +15,7 @@ trait HandlesStatsCalculations
 
     // ... (otras propiedades de estado de estadísticas) ...
     public int $cantidadRecaudosRealizados = 0;
+    public int $totalPrestamosAsignados = 0;
     public float $dineroRecaudado = 0;
     public float $gastosAutorizados = 0;
     public float $gastosNoAutorizados = 0;
@@ -38,6 +39,7 @@ trait HandlesStatsCalculations
     public function resetStats(): void
     {
         $this->cantidadRecaudosRealizados =
+        $this->totalPrestamosAsignados =
         $this->dineroRecaudado =
         $this->gastosAutorizados =
         $this->gastosNoAutorizados =
@@ -171,6 +173,7 @@ trait HandlesStatsCalculations
         );
 
         $this->cantidadRecaudosRealizados = $stats['cantidadRecaudosRealizados'];
+        $this->totalPrestamosAsignados = $stats['totalPrestamosAsignados'];
         $this->dineroRecaudado = $stats['dineroRecaudado'];
         $this->gastosAutorizados = $stats['gastosAutorizados'];
         $this->gastosNoAutorizados = $stats['gastosNoAutorizados'];

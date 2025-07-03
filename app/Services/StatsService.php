@@ -68,6 +68,7 @@ class StatsService
 
         // Inicializar todas las variables que se devuelven para evitar "Undefined variable"
         $cantidadRecaudosRealizados = 0;
+        $totalPrestamosAsignados = 0;
         $dineroRecaudado = 0;
         $gastosAutorizados = 0;
         $gastosNoAutorizados = 0; // **Nueva variable**
@@ -93,6 +94,9 @@ class StatsService
         // Recaudos Realizados y Dinero Recaudado
         $cantidadRecaudosRealizados = (clone $baseAbono)->count();
         $dineroRecaudado = (clone $baseAbono)->sum('monto_abono');
+
+        // Contar el total de préstamos donde el usuario es el agente asignado, SIN filtro de fecha.
+        $totalPrestamosAsignados = Prestamo::where('agente_asignado', $usuarioSeleccionado->id)->count();
 
         // GASTOS AUTORIZADOS
         $gastosAutorizados = (clone $baseGastoAutorizado)->sum('valor');
@@ -179,6 +183,7 @@ class StatsService
 
         return [
             'cantidadRecaudosRealizados' => $cantidadRecaudosRealizados,
+            'totalPrestamosAsignados' => $totalPrestamosAsignados,
             'dineroRecaudado' => $dineroRecaudado,
             'gastosAutorizados' => $gastosAutorizados,
             'gastosNoAutorizados' => $gastosNoAutorizados, // **Añadir al retorno**

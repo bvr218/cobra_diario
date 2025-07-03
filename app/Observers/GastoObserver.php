@@ -69,22 +69,29 @@ class GastoObserver
             // Esto soluciona el error de "Duplicate entry" que puede ocurrir bajo alta concurrencia.
             $dineroBase = DineroBase::firstOrCreate(
                 ['user_id' => $gasto->user_id],
-                ['monto' => 0]
+                ['monto' => 0, 'monto_general' => 0] // Asegúrate de inicializar monto_general también si es nuevo
             );
 
-            // Un gasto (monto > 0) debe disminuir el dinero base.
-            // Una reversión (monto < 0) debe aumentarlo.
+            // Ajuste para la columna 'monto'
             if ($monto > 0) {
                 $dineroBase->decrement('monto', $monto);
             } else {
                 $dineroBase->increment('monto', abs($monto));
             }
 
+            // --- NUEVA LÓGICA PARA monto_general ---
+            if ($monto > 0) {
+                $dineroBase->decrement('monto_general', $monto);
+            } else {
+                $dineroBase->increment('monto_general', abs($monto));
+            }
+            // --- FIN NUEVA LÓGICA ---
+
             HistorialMovimiento::create([
                 'user_id'       => $dineroBase->user_id,
                 'tipo'          => $tipoMovimiento, // Variable ahora disponible en el closure
                 'descripcion'   => $descripcion,
-                'monto'         => $monto,
+                'monto'         => $monto, // Este monto es el del movimiento, no el saldo final
                 'fecha'         => now(),
                 'es_edicion'    => $esEdicion,
                 'referencia_id' => $gasto->id,
