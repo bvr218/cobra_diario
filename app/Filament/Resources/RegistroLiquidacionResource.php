@@ -33,18 +33,18 @@ class RegistroLiquidacionResource extends Resource
                     ->label('Nombre de Registro')
                     ->maxLength(50)
                     ->columnSpanFull(),
-                Forms\Components\Select::make('user_id')
-                    ->relationship('user', 'name')
-                    ->required()
-                    ->label('Usuario')
-                    ->searchable()
-                    ->preload(),
-                Forms\Components\DateTimePicker::make('desde')
-                    ->label('Fecha y Hora Inicio/Desde')
-                    ->nullable(),
-                Forms\Components\DateTimePicker::make('hasta')
-                    ->label('Fecha y Hora Fin/Hasta')
-                    ->nullable(),
+                // Forms\Components\Select::make('user_id')
+                //     ->relationship('user', 'name')
+                //     ->required()
+                //     ->label('Usuario')
+                //     ->searchable()
+                //     ->preload(),
+                // Forms\Components\DateTimePicker::make('desde')
+                //     ->label('Fecha y Hora Inicio/Desde')
+                //     ->nullable(),
+                // Forms\Components\DateTimePicker::make('hasta')
+                //     ->label('Fecha y Hora Fin/Hasta')
+                //     ->nullable(),
             ]);
     }
 
@@ -61,10 +61,12 @@ class RegistroLiquidacionResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('desde')
                     ->label('Desde')
+                    ->toggleable()
                     ->dateTime('Y-m-d h:i A') // Changed to 12-hour format with AM/PM
                     ->sortable(),
                 Tables\Columns\TextColumn::make('hasta')
                     ->label('Hasta')
+                    ->toggleable()
                     ->dateTime('Y-m-d h:i A') // Changed to 12-hour format with AM/PM
                     ->sortable(),
             ])
@@ -76,27 +78,15 @@ class RegistroLiquidacionResource extends Resource
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
                 Action::make('abrir_liquidacion')
-                    ->label('Abrir Liquidación')
-                    ->icon('heroicon-o-arrow-top-right-on-square')
+                    ->label('Ver Liquidación Guardada') // <-- Cambiamos la etiqueta para más claridad
+                    ->icon('heroicon-o-document-magnifying-glass') // <-- Un ícono más apropiado
                     ->color('success')
                     ->url(function (RegistroLiquidacion $record): string {
-                        // Determina el rol del usuario asociado a la liquidación
-                        // Asegúrate de que tu modelo User tenga un método para verificar roles,
-                        // por ejemplo, usando Spatie/Laravel-Permission.
-                        $rol = null;
-                        if ($record->user) {
-                            $rol = $record->user->hasRole('Oficina') ? 'Oficina' : ($record->user->hasRole('Agente') ? 'Agente' : null);
-                        }
-
-                        return RegistroAbonosPage::getUrl([
-                            'u' => $record->user_id, // ID del usuario
-                            'fi' => $record->desde?->format('Y-m-d\TH:i'), // Fecha de inicio de la liquidación
-                            'ff' => $record->hasta?->format('Y-m-d\TH:i'), // Fecha de fin de la liquidación
-                            'f' => true, // Activa 'Día Individual' para filtrar por rango de fechas
-                            'r' => $rol, // ¡Este es el cambio clave! Pasa el rol para preseleccionar la pestaña
-                        ]);
+                        // APUNTAMOS A LA NUEVA RUTA ESTÁTICA
+                        return static::getUrl('view-saved', ['record' => $record->id]);
                     })
                     ->openUrlInNewTab(),
+
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -118,6 +108,7 @@ class RegistroLiquidacionResource extends Resource
             'index' => Pages\ListRegistroLiquidacions::route('/'),
             'create' => Pages\CreateRegistroLiquidacion::route('/create'),
             'edit' => Pages\EditRegistroLiquidacion::route('/{record}/edit'),
+            'view-saved' => Pages\VerLiquidacionGuardada::route('/{record}/view-saved'),
         ];
     }
 }

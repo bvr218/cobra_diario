@@ -17,11 +17,15 @@ class RegistroLiquidacion extends Model
         'user_id',
         'desde',
         'hasta',
+        'datos_liquidacion',
+        'type',
     ];
 
     protected $casts = [
         'desde' => 'datetime',
         'hasta' => 'datetime',
+        'datos_liquidacion' => 'array',
+        'type' => 'string',
     ];
 
     /**

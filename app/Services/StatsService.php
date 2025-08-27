@@ -9,8 +9,10 @@ use App\Models\HistorialMovimiento;
 use App\Models\User;
 use App\Models\DineroBase;
 use App\Models\Gasto;
+use App\Models\AjusteDinero; // Asegúrate de que este modelo exista y esté en la ruta correcta
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB; // Importar DB para transacciones
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class StatsService
 {
@@ -24,93 +26,66 @@ class StatsService
      */
     public function computeUserStats(User $usuarioSeleccionado, ?string $fechaInicioString, ?string $fechaFinString): array
     {
-        $queryFechaInicio = null;
-        $queryFechaFin = null;
+        $queryFechaInicio = $fechaInicioString ? Carbon::parse($fechaInicioString) : null;
+        $queryFechaFin = $fechaFinString ? Carbon::parse($fechaFinString) : null;
 
-        // CAMBIO: Parsear las fechas con las horas si vienen del input datetime-local
-        if ($fechaInicioString) {
-            $queryFechaInicio = Carbon::parse($fechaInicioString);
-        }
-        if ($fechaFinString) {
-            $queryFechaFin = Carbon::parse($fechaFinString);
-        }
-
-        // Clona las bases de consulta para evitar mutaciones inesperadas
+        // --- BASES DE CONSULTA ---
         $basePrestamo = Prestamo::where('agente_asignado', $usuarioSeleccionado->id);
         $baseAbono = Abono::where('registrado_por_id', $usuarioSeleccionado->id);
-        $baseHistorial = HistorialMovimiento::where('user_id', $usuarioSeleccionado->id); 
-        
-        // Para cálculos generales de montos, comisiones, etc., seguimos usando solo 'autorizado'
-        $baseRefinanciamientoAutorizado = Refinanciamiento::query()
-                                ->whereHas("prestamo", fn($q) => $q->where("agente_asignado", $usuarioSeleccionado->id))
-                                ->where('estado', 'autorizado'); 
-        
-        // Base para gastos autorizados
-        $baseGastoAutorizado = Gasto::where('user_id', $usuarioSeleccionado->id)->where('autorizado', true);
-        // Base para gastos NO autorizados
-        $baseGastoNoAutorizado = Gasto::where('user_id', $usuarioSeleccionado->id)->where('autorizado', false);
-
-        // Para el conteo de "Cantidad de Refinanciaciones" que incluye pendientes y autorizadas
+        $baseHistorial = HistorialMovimiento::where('user_id', $usuarioSeleccionado->id);
         $baseRefinanciamientoConteo = Refinanciamiento::query()
-                                ->whereHas("prestamo", fn($q) => $q->where("agente_asignado", $usuarioSeleccionado->id)); // Base para conteos específicos
-
+                                ->whereHas("prestamo", fn($q) => $q->where("agente_asignado", $usuarioSeleccionado->id));
+        $baseGastoAutorizado = Gasto::where('user_id', $usuarioSeleccionado->id)->where('autorizado', true);
+        $baseGastoNoAutorizado = Gasto::where('user_id', $usuarioSeleccionado->id)->where('autorizado', false);
+        $baseAjusteDinero = AjusteDinero::where('user_id', $usuarioSeleccionado->id);
 
         if ($queryFechaInicio && $queryFechaFin) {
-            // CAMBIO: Usar whereBetween directamente con los objetos Carbon que ya tienen fecha y hora
-            $baseHistorial->whereBetween('fecha', [$queryFechaInicio, $queryFechaFin]);
-            $basePrestamo->whereBetween('created_at', [$queryFechaInicio, $queryFechaFin]);
             $baseAbono->whereBetween('created_at', [$queryFechaInicio, $queryFechaFin]);
-            $baseRefinanciamientoAutorizado->whereBetween('created_at', [$queryFechaInicio, $queryFechaFin]);
-            $baseRefinanciamientoConteo->whereBetween('created_at', [$queryFechaInicio, $queryFechaFin]);
             $baseGastoAutorizado->whereBetween('created_at', [$queryFechaInicio, $queryFechaFin]);
             $baseGastoNoAutorizado->whereBetween('created_at', [$queryFechaInicio, $queryFechaFin]);
+            $baseAjusteDinero->whereBetween('created_at', [$queryFechaInicio, $queryFechaFin]);
+            $baseHistorial->whereBetween('fecha', [$queryFechaInicio, $queryFechaFin]);
+
+            $dateFilterLogic = function ($query) use ($queryFechaInicio, $queryFechaFin) {
+                $query->where(function ($subQuery) use ($queryFechaInicio, $queryFechaFin) {
+                    $subQuery->whereNull('authorized_at')
+                            ->whereBetween('created_at', [$queryFechaInicio, $queryFechaFin]);
+                })->orWhere(function ($subQuery) use ($queryFechaInicio, $queryFechaFin) {
+                    $subQuery->whereNotNull('authorized_at')
+                            ->whereBetween('authorized_at', [$queryFechaInicio, $queryFechaFin]);
+                });
+            };
+
+            $basePrestamo->where($dateFilterLogic);
+            $baseRefinanciamientoConteo->where($dateFilterLogic);
         }
 
-        // Inicializar todas las variables que se devuelven para evitar "Undefined variable"
-        $cantidadRecaudosRealizados = 0;
-        $totalPrestamosAsignados = 0;
-        $dineroRecaudado = 0;
-        $gastosAutorizados = 0;
-        $gastosNoAutorizados = 0; // **Nueva variable**
-        $dineroEnMano = 0; // **Nueva variable para dinero_en_mano**
-        $dineroEnCaja = 0;
-        $dineroInicial = 0;
-        $dineroCapital = 0;
-        $totalPrestado = 0;
-        $totalPrestadoConInteres = 0;
-        $comisionesPrestamos = 0;
-        $comisionesRefinanciamientos = 0;
-        $totalComision = 0;
-        $prestamosEntregados = 0;
-        $prestamosPendientes = 0; // **Nueva variable para conteo de pendientes**
-        $cantidadRefinanciaciones = 0;
-        $cantidadRefinanciacionesPendientes = 0; // **Nueva variable para pendientes**
-        $montoRefinanciaciones = 0;
-        $valorRefinanciacionesConInteres = 0;
-        $deudaRefinanciadaTotal = 0; // **Nueva variable para la suma de deuda_refinanciada**
-        $deudaRefinanciadaInteresTotal = 0; // **Nueva variable para la suma de deuda_refinanciada_interes**
+        $baseRefinanciamientoAutorizado = (clone $baseRefinanciamientoConteo)->where('estado', 'autorizado');
 
+        // --- CÁLCULOS ---
 
-        // Recaudos Realizados y Dinero Recaudado
         $cantidadRecaudosRealizados = (clone $baseAbono)->count();
         $dineroRecaudado = (clone $baseAbono)->sum('monto_abono');
-
-        // Contar el total de préstamos donde el usuario es el agente asignado, SIN filtro de fecha.
-        $totalPrestamosAsignados = Prestamo::where('agente_asignado', $usuarioSeleccionado->id)->count();
-
-        // GASTOS AUTORIZADOS
         $gastosAutorizados = (clone $baseGastoAutorizado)->sum('valor');
         $gastosNoAutorizados = (clone $baseGastoNoAutorizado)->sum('valor');
+        $ajustesDineroCount = (clone $baseAjusteDinero)->count();
 
+        // Total de préstamos asignados (sin filtro de fecha, como en tu versión original)
+        $totalPrestamosAsignados = Prestamo::where('agente_asignado', $usuarioSeleccionado->id)->count();
+        
+        // Préstamos finalizados (usa 'registrado_id', como en tu versión actualizada)
+        $prestamosFinalizadosCount = Prestamo::where('registrado_id', $usuarioSeleccionado->id)
+                                             ->where('estado', 'finalizado')
+                                             ->count();
 
-        // Dinero en Caja (ajustado por el rango de fechas si se aplica)
+        // *** INICIO DE LA LÓGICA RESTAURADA ***
+        // Dinero en Caja, Base, Capital, etc. (Lógica de la versión original)
         $queryCaja = HistorialMovimiento::where('user_id', $usuarioSeleccionado->id)
-            ->where('es_edicion', true) // CAMBIO: Usar es_edicion en lugar de tipo
-            ->where('tabla_origen', 'dinero_bases'); // Mantener esta condición
+            ->where('es_edicion', true)
+            ->where('tabla_origen', 'dinero_bases');
 
         $ultimoMovimientoCaja = null;
         if ($queryFechaFin) {
-            // CAMBIO: Usar $queryFechaFin directamente, que ya contiene la hora
             $ultimoMovimientoCaja = (clone $queryCaja)
                 ->where('fecha', '<=', $queryFechaFin)
                 ->orderByDesc('fecha')
@@ -125,140 +100,130 @@ class StatsService
             : 0;
 
         $dineroBaseUsuario = DineroBase::where('user_id', $usuarioSeleccionado->id)->first();
-        
         $dineroInicial = $dineroBaseUsuario ? (float) $dineroBaseUsuario->monto_inicial : 0;
         $dineroEnMano = $dineroBaseUsuario ? (float) $dineroBaseUsuario->dinero_en_mano : 0;
-        
         $dineroCapital = $dineroBaseUsuario ? (float) $dineroBaseUsuario->monto_general : 0;
+        // *** FIN DE LA LÓGICA RESTAURADA ***
 
-        // Total Prestado
+        // Cálculos de Préstamos
         $totalPrestado = (clone $basePrestamo)
-            ->where(fn($q) => $q->where('estado', 'activo')->orWhere('estado','autorizado'))
+            ->whereIn('estado', ['activo', 'autorizado'])
             ->sum('valor_total_prestamo');
-
-        // Total Prestado con Interés
         $totalPrestadoConInteres = (clone $basePrestamo)
-            ->where(fn($q) => $q->where('estado', 'activo')->orWhere('estado','autorizado'))
+            ->whereIn('estado', ['activo', 'autorizado'])
             ->sum('valor_prestado_con_interes');
-
-        // Comisiones tomadas de Prestamo y Refinanciamiento
-        $comisionesPrestamos = (clone $basePrestamo)
-                                ->whereNotNull('comicion')
-                                ->where('comicion_borrada', false) // <-- Condición para comisiones no borradas
-                                ->sum('comicion');
-
-        $comisionesRefinanciamientos = (clone $baseRefinanciamientoAutorizado)
-                                        ->whereNotNull('comicion')
-                                        ->where('comicion_borrada', false) // <-- Condición para comisiones no borradas
-                                        ->sum('comicion');
-
-        $totalComision = $comisionesPrestamos + $comisionesRefinanciamientos;
-
-        // Préstamos Entregados
         $prestamosEntregados = (clone $basePrestamo)
-            ->where(function ($q) {
-                $q->where('estado', 'activo')->orWhere('estado', 'autorizado');
-            })
-            ->count();
-
-        // **Préstamos Pendientes**
+            ->whereIn('estado', ['activo', 'autorizado'])->count();
         $prestamosPendientes = (clone $basePrestamo)
-            ->where('estado', 'pendiente')
-            ->count();
+            ->where('estado', 'pendiente')->count();
 
-        // Refinanciaciones:
-        // Conteo solo autorizadas para el número principal que se muestra
+        // Cálculos de Refinanciamiento
         $cantidadRefinanciaciones = (clone $baseRefinanciamientoAutorizado)->count();
-        
-        // Conteo solo pendientes para el paréntesis
         $cantidadRefinanciacionesPendientes = (clone $baseRefinanciamientoConteo)
-                                    ->where('estado', 'pendiente')
-                                    ->count();
+                                    ->where('estado', 'pendiente')->count();
         $montoRefinanciaciones = (clone $baseRefinanciamientoAutorizado)->sum('valor');
         $valorRefinanciacionesConInteres = (clone $baseRefinanciamientoAutorizado)->sum('total');
-        // **Calcular la suma de deuda_refinanciada**
         $deudaRefinanciadaTotal = (clone $baseRefinanciamientoAutorizado)->sum('deuda_refinanciada');
         $deudaRefinanciadaInteresTotal = (clone $baseRefinanciamientoAutorizado)->sum('deuda_refinanciada_interes');
 
-
+        // --- LÓGICA AISLADA PARA COMISIONES (de la versión actualizada) ---
+        $comisionesPrestamosQuery = Prestamo::where('registrado_id', $usuarioSeleccionado->id)
+                                            ->whereIn('estado', ['autorizado', 'activo', 'finalizado', 'desactivado'])
+                                            ->whereNotNull('comicion')
+                                            ->where('comicion', '>', 0)
+                                            ->where('comicion_borrada', false);
+        $comisionesRefinanciamientosQuery = Refinanciamiento::whereHas('prestamo', function ($q) use ($usuarioSeleccionado) {
+                                                    $q->where('registrado_id', $usuarioSeleccionado->id)
+                                                      ->whereIn('estado', ['autorizado', 'activo', 'finalizado', 'desactivado']);
+                                                })
+                                                ->where('estado', 'autorizado')
+                                                ->whereNotNull('comicion')
+                                                ->where('comicion', '>', 0)
+                                                ->where('comicion_borrada', false);
+        if ($queryFechaInicio && $queryFechaFin) {
+            $comisionesPrestamosQuery->whereBetween('created_at', [$queryFechaInicio, $queryFechaFin]);
+            $comisionesRefinanciamientosQuery->whereBetween('created_at', [$queryFechaInicio, $queryFechaFin]);
+        }
+        $comisionesPrestamos = $comisionesPrestamosQuery->sum('comicion');
+        $comisionesRefinanciamientos = $comisionesRefinanciamientosQuery->sum('comicion');
+        $totalComision = $comisionesPrestamos + $comisionesRefinanciamientos;
+        
         return [
             'cantidadRecaudosRealizados' => $cantidadRecaudosRealizados,
             'totalPrestamosAsignados' => $totalPrestamosAsignados,
             'dineroRecaudado' => $dineroRecaudado,
             'gastosAutorizados' => $gastosAutorizados,
-            'gastosNoAutorizados' => $gastosNoAutorizados, // **Añadir al retorno**
-            'dineroEnMano' => $dineroEnMano, // **Añadir al retorno**
+            'gastosNoAutorizados' => $gastosNoAutorizados,
+            'dineroEnMano' => $dineroEnMano,
             'dineroEnCaja' => $dineroEnCaja,
             'dineroInicial' => $dineroInicial,
             'dineroCapital' => $dineroCapital,
             'totalPrestado' => $totalPrestado,
             'totalComision' => $totalComision,
             'prestamosEntregados' => $prestamosEntregados,
-            'prestamosPendientes' => $prestamosPendientes, // **Añadir al retorno**
+            'prestamosPendientes' => $prestamosPendientes,
             'totalPrestadoConInteres' => $totalPrestadoConInteres,
             'cantidadRefinanciaciones' => $cantidadRefinanciaciones,
-            'cantidadRefinanciacionesPendientes' => $cantidadRefinanciacionesPendientes, // **Añadir al retorno**
+            'cantidadRefinanciacionesPendientes' => $cantidadRefinanciacionesPendientes,
             'montoRefinanciaciones' => $montoRefinanciaciones,
             'valorRefinanciacionesConInteres' => $valorRefinanciacionesConInteres,
-            'deudaRefinanciadaTotal' => $deudaRefinanciadaTotal, // **Añadir al retorno**
-            'deudaRefinanciadaInteresTotal' => $deudaRefinanciadaInteresTotal, // **Añadir al retorno**
+            'deudaRefinanciadaTotal' => $deudaRefinanciadaTotal,
+            'deudaRefinanciadaInteresTotal' => $deudaRefinanciadaInteresTotal,
+            'prestamosFinalizadosCount' => $prestamosFinalizadosCount,
+            'ajustesDineroCount' => $ajustesDineroCount,
         ];
     }
 
     /**
-     * "Elimina" comisiones estableciendo su valor a 0 en Prestamos y Refinanciamientos.
-     * No afecta el dinero base del usuario.
+     * "Elimina" comisiones estableciendo comicion_borrada a true.
      *
      * @param User $usuarioSeleccionado
      * @param string|null $fechaInicioString
      * @param string|null $fechaFinString
-     * @return int El número total de comisiones "eliminadas" (establecidas a 0).
+     * @return int El número total de comisiones "eliminadas".
      */
     public function deleteUserCommissions(User $usuarioSeleccionado, ?string $fechaInicioString, ?string $fechaFinString): int
     {
-        // CAMBIO: Parsear las fechas con las horas si vienen del input datetime-local
         $queryFechaInicio = $fechaInicioString ? Carbon::parse($fechaInicioString) : null;
         $queryFechaFin = $fechaFinString ? Carbon::parse($fechaFinString) : null;
         $deletedCount = 0;
 
         DB::transaction(function () use ($usuarioSeleccionado, $queryFechaInicio, $queryFechaFin, &$deletedCount) {
             // Comisiones de Préstamos a "eliminar"
-            $prestamosQuery = Prestamo::where('agente_asignado', $usuarioSeleccionado->id)
+            $prestamosQuery = Prestamo::where('registrado_id', $usuarioSeleccionado->id)
+                                    ->whereIn('estado', ['autorizado', 'activo', 'finalizado', 'desactivado'])
                                     ->whereNotNull('comicion')
                                     ->where('comicion', '>', 0)
-                                    ->where('comicion_borrada', false); // <-- Solo comisiones no borradas
+                                    ->where('comicion_borrada', false);
 
             if ($queryFechaInicio && $queryFechaFin) {
-                // CAMBIO: Usar whereBetween directamente con los objetos Carbon que ya tienen fecha y hora
                 $prestamosQuery->whereBetween('created_at', [$queryFechaInicio, $queryFechaFin]);
             }
 
             $prestamosConComision = $prestamosQuery->get();
-
             foreach ($prestamosConComision as $prestamo) {
-                $prestamo->comicion_borrada = true; // <-- Cambiar a true en lugar de comicion = 0
-                $prestamo->saveQuietly(); 
+                $prestamo->comicion_borrada = true;
+                $prestamo->saveQuietly();
                 $deletedCount++;
             }
 
             // Comisiones de Refinanciamientos a "eliminar"
             $refinanciamientosQuery = Refinanciamiento::whereHas('prestamo', function ($q) use ($usuarioSeleccionado) {
-                                                    $q->where('agente_asignado', $usuarioSeleccionado->id);
+                                                    $q->where('registrado_id', $usuarioSeleccionado->id)
+                                                      ->whereIn('estado', ['autorizado', 'activo', 'finalizado', 'desactivado']);
                                                 })
                                                 ->where('estado', 'autorizado')
                                                 ->whereNotNull('comicion')
                                                 ->where('comicion', '>', 0)
-                                                ->where('comicion_borrada', false); // <-- Solo comisiones no borradas
+                                                ->where('comicion_borrada', false);
 
             if ($queryFechaInicio && $queryFechaFin) {
-                // CAMBIO: Usar whereBetween directamente con los objetos Carbon que ya tienen fecha y hora
                 $refinanciamientosQuery->whereBetween('created_at', [$queryFechaInicio, $queryFechaFin]);
             }
 
             $refinanciamientosConComision = $refinanciamientosQuery->get();
-
             foreach ($refinanciamientosConComision as $refinanciamiento) {
-                $refinanciamiento->comicion_borrada = true; // <-- Cambiar a true en lugar de comicion = 0
+                $refinanciamiento->comicion_borrada = true;
                 $refinanciamiento->saveQuietly();
                 $deletedCount++;
             }
@@ -268,9 +233,7 @@ class StatsService
     }
 
     /**
-     * Ajusta el dinero base (monto y monto_general) de un usuario y registra el movimiento.
-     * Esta función se mantiene, pero ya NO será llamada por deleteUserCommissions
-     * si la política es no afectar dinero_bases con las comisiones.
+     * Ajusta el dinero base (monto y monto_general) de un usuario.
      *
      * @param User $user
      * @param float $amount
@@ -284,18 +247,12 @@ class StatsService
             ['monto' => 0, 'monto_general' => 0, 'dinero_inicial' => 0, 'dinero_en_mano' => 0]
         );
 
-        $oldMonto = $dineroBaseRecord->monto;
-        $oldMontoGeneral = $dineroBaseRecord->monto_general;
-
         $adjustedAmount = $isPositive ? $amount : -$amount;
+        
+        // Se utiliza la función de incremento/decremento de Eloquent para mayor seguridad
+        $dineroBaseRecord->increment('monto', $adjustedAmount);
+        $dineroBaseRecord->increment('monto_general', $adjustedAmount);
 
-        $newMonto = $oldMonto + $adjustedAmount;
-        $newMontoGeneral = $oldMontoGeneral + $adjustedAmount;
-
-        $dineroBaseRecord->monto = $newMonto;
-        $dineroBaseRecord->monto_general = $newMontoGeneral;
-        $dineroBaseRecord->save();
-
-        return $newMonto;
+        return $dineroBaseRecord->monto;
     }
 }

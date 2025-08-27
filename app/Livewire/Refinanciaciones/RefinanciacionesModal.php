@@ -79,23 +79,31 @@ class RefinanciacionesModal extends Component
             });
         }
 
-        // En "cantidad" mostramos autorizadas + pendientes
         if ($this->modalType === 'cantidad') {
             $query->whereIn('estado', ['autorizado', 'pendiente']);
-        }
-        // En "valor_total" y "valor_interes" sólo autorizadas
-        else {
+        } else {
             $query->where('estado', 'autorizado');
         }
 
-        // Filtro de fecha y hora (igual para todos los modos)
+        // --- INICIO DE LA CORRECCIÓN ---
         if ($this->fechaInicio && $this->fechaFin) {
-            $query->whereBetween('created_at', [
-                Carbon::parse($this->fechaInicio),
-                Carbon::parse($this->fechaFin),
-            ]);
-        }
+            // Función anónima con la lógica de fecha correcta
+            $dateFilterLogic = function ($q) {
+                $q->where(function ($subQuery) {
+                    // Opción 1: Si no tiene fecha de autorización, usa la de creación
+                    $subQuery->whereNull('authorized_at')
+                             ->whereBetween('created_at', [Carbon::parse($this->fechaInicio), Carbon::parse($this->fechaFin)]);
+                })->orWhere(function ($subQuery) {
+                    // Opción 2: Si SÍ tiene fecha de autorización, usa esa fecha
+                    $subQuery->whereNotNull('authorized_at')
+                             ->whereBetween('authorized_at', [Carbon::parse($this->fechaInicio), Carbon::parse($this->fechaFin)]);
+                });
+            };
 
+            $query->where($dateFilterLogic); // Aplicar la lógica al query principal
+        }
+        // --- FIN DE LA CORRECCIÓN ---
+        
         $this->refinanciaciones = $query->get();
     }
 

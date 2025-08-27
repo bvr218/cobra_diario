@@ -1,5 +1,3 @@
-{{-- resources/views/livewire/adjust-money-modal.blade.php --}}
-
 <div> {{-- Contenedor raíz único --}}
     @if ($showAdjustMoneyModal)
         {{-- Fondo del modal (backdrop) --}}
@@ -10,7 +8,7 @@
             <div
                 class="relative w-full max-w-lg overflow-hidden rounded-lg bg-white shadow-xl transition-all dark:bg-gray-800 sm:my-8"
                 role="dialog" aria-modal="true" aria-labelledby="modal-headline"
-                @click.away="$wire.closeModal()" {{-- Cierra si se hace clic fuera (opcional) --}}
+                @click.away="$wire.closeModal()"
             >
                 {{-- Encabezado del Modal --}}
                 <div class="border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800 sm:px-6">
@@ -39,12 +37,27 @@
                                 <p class="text-sm text-gray-600 dark:text-gray-400">Ajustando dinero base para: <span class="font-bold text-primary-600 dark:text-primary-400">{{ $usuarioSeleccionadoName }}</span></p>
                             @endif
 
+                            {{-- Campo de Monto --}}
                             <div>
                                 <label for="amountToAdjust" class="block text-sm font-medium text-gray-700 dark:text-gray-200">Monto a Ajustar</label>
-                                <input type="number" step="0.01" id="amountToAdjust" wire:model.defer="amountToAdjust" required
+                                <input type="number" step="any" id="amountToAdjust" wire:model.defer="amountToAdjust" required
+                                       placeholder="Positivo para sumar, negativo para restar"
                                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 sm:text-sm">
                                 @error('amountToAdjust') <span class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</span> @enderror
                             </div>
+
+                            {{-- === INICIO DEL CAMBIO: AÑADIR TEXTAREA DE DESCRIPCIÓN === --}}
+                            <div>
+                                <label for="descripcion" class="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                    Razón / Descripción del Ajuste (Obligatorio)
+                                </label>
+                                <textarea id="descripcion" wire:model.defer="descripcion" required rows="4"
+                                          placeholder="Explica detalladamente el motivo de este ajuste..."
+                                          class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 sm:text-sm"></textarea>
+                                @error('descripcion') <span class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</span> @enderror
+                            </div>
+                            {{-- === FIN DEL CAMBIO === --}}
+
                         </div>
                     </div>
 

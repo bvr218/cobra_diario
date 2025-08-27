@@ -142,6 +142,7 @@ class PermissionResource extends Resource
             'controlSesion.create' => 'Crear Horario',
             'controlSesion.edit' => 'Editar Horario',
             'controlSesion.delete' => 'Eliminar Horario',
+            'controlSesion.ignore' => 'Ignorar Horarios',
             'ruta.index' => 'Ver Las Rutas',
             'dineroBase.index' => 'Ver todos los Dinero Base',
             'dineroBase.view' => 'Ver Dinero Base',
@@ -149,7 +150,8 @@ class PermissionResource extends Resource
             'dineroBase.edit' => 'Editar Dinero Base',
             'dineroBase.delete' => 'Eliminar Dinero Base',
             'historialMovimiento.index' => 'Ver Historial De Movimientos',
-            'stats.index' => 'Ver Estadisticas',
+            'stats.index' => 'Ver Estadisticas generales, admin',
+            'stats-agente.index' => 'Ver estadisticas propias, agente',
             'password.index' => 'Ver pagina de Cambiar contraseña',
             'refinanciamientos.index' => 'Ver la pagina de Refinanciamientos',
             'refinanciamientos.view' => 'Ver unicamente mis refinanciaciones',
@@ -160,6 +162,7 @@ class PermissionResource extends Resource
             'registroliquidaciones.delete' => 'Eliminar Registro de Liquidaciones',
             'registroliquidaciones.edit' => 'Editar los Registro de Liquidaciones',
             'notificaciones.index' => 'Ver Pagina de Notificaciones',
+            'liquidaciones-mensuales.index' => 'Ver Pagina de Liquidaciones Mensuales',
 
 
 

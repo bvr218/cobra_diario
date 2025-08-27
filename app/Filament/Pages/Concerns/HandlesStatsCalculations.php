@@ -3,17 +3,17 @@
 namespace App\Filament\Pages\Concerns;
 
 use Illuminate\Support\Carbon;
-use App\Models\RegistroLiquidacion; // Importar el modelo RegistroLiquidacion
-use App\Services\StatsService; // Asegúrate de que esta clase exista y sea importada
+use App\Models\RegistroLiquidacion;
+use App\Services\StatsService;
+use Filament\Notifications\Notification;
+use App\Models\DineroBase; 
+use App\Models\HistorialMovimiento;
 
 trait HandlesStatsCalculations
 {
-    // Propiedades de estado para filtros de fecha y HORA (declaradas aquí como sus "dueños")
-    public bool $filtrarPorFecha = true; // Cambiado a true para que "Día Individual" sea el default
-    public ?string $fechaInicio = null; // Ahora puede contener fecha y hora
-    public ?string $fechaFin = null;    // Ahora puede contener fecha y hora
-
-    // ... (otras propiedades de estado de estadísticas) ...
+    public bool $filtrarPorFecha = true;
+    public ?string $fechaInicio = null;
+    public ?string $fechaFin = null;
     public int $cantidadRecaudosRealizados = 0;
     public int $totalPrestamosAsignados = 0;
     public float $dineroRecaudado = 0;
@@ -23,18 +23,22 @@ trait HandlesStatsCalculations
     public float $totalPrestado = 0;
     public float $totalComision = 0;
     public int $prestamosEntregados = 0;
-    public int $prestamosPendientes = 0; // Nueva propiedad para préstamos pendientes
+    public int $prestamosPendientes = 0;
     public float $totalPrestadoConInteres = 0;
     public int $cantidadRefinanciaciones = 0;
     public int $cantidadRefinanciacionesPendientes = 0;
-    public float $montoRefinanciaciones = 0;    
+    public float $montoRefinanciaciones = 0;
     public float $valorRefinanciacionesConInteres = 0;
     public float $deudaRefinanciadaTotal = 0;
     public float $deudaRefinanciadaInteresTotal = 0;
-    
-    public float $dineroInicialDelUsuario = 0;
+
+    public float $dineroInicial = 0;
     public float $dineroCapital = 0;
-    public float $dineroEnMano = 0; // Nueva propiedad para dinero_en_mano
+    public float $dineroEnMano = 0;
+
+    public int $prestamosFinalizadosCount = 0;
+
+    public int $ajustesDineroCount = 0;
 
     public function resetStats(): void
     {
@@ -47,18 +51,22 @@ trait HandlesStatsCalculations
         $this->totalPrestado =
         $this->totalComision =
         $this->prestamosEntregados =
-        $this->prestamosPendientes = // Resetear la nueva propiedad
+        $this->prestamosPendientes =
         $this->totalPrestadoConInteres =
         $this->cantidadRefinanciaciones =
         $this->cantidadRefinanciacionesPendientes =
         $this->montoRefinanciaciones =
-        $this->valorRefinanciacionesConInteres = 
+        $this->valorRefinanciacionesConInteres =
         $this->deudaRefinanciadaTotal =
         $this->deudaRefinanciadaInteresTotal = 0;
-        
-        $this->dineroInicialDelUsuario = 0;
+
+        $this->prestamosFinalizadosCount = 0;
+
+        $this->dineroInicial = 0;
         $this->dineroCapital = 0;
-        $this->dineroEnMano = 0; // Resetear la nueva propiedad
+        $this->dineroEnMano = 0;
+
+        $this->ajustesDineroCount = 0;
     }
 
     /**
@@ -67,23 +75,22 @@ trait HandlesStatsCalculations
      */
     public function initializeDatesBasedOnFilter(): void
     {
-        // Lógica prioritaria para usuarios con permiso 'registro.view'.
-        // Esto asegura que, sin importar desde dónde se llame este método (mount, selectUsuario, etc.),
-        // el rango de fechas siempre será el día actual completo.
+        // Si el usuario tiene permiso 'registro.view', el filtro de fechas está bloqueado
+        // y se establece a las 00:00 del día actual hasta la hora actual.
         if (auth()->user()?->can('registro.view')) {
             $hoy = Carbon::today();
-            $this->filtrarPorFecha = true;
-            // Usamos copy() y start/endOfDay() para ser más explícitos y seguros.
-            $this->fechaInicio = $hoy->copy()->startOfDay()->format('Y-m-d\TH:i');
-            $this->fechaFin = $hoy->copy()->endOfDay()->format('Y-m-d\TH:i');
-            // Salimos del método para evitar que la lógica de abajo sobrescriba las fechas.
+            $this->filtrarPorFecha = true; // Forzar a filtrar por fecha
+            $this->fechaInicio = $hoy->copy()->startOfDay()->format('Y-m-d\TH:i:s'); // Incluye segundos
+            $this->fechaFin = Carbon::now()->format('Y-m-d\TH:i:s'); // Fecha y hora actual incluyendo segundos
+            $this->lockDateFilter = true; // Bloquear los controles de fecha
             return;
         }
 
+        // Si el usuario NO tiene permiso 'registro.view'
         if ($this->filtrarPorFecha) {
-            // Inicializar fechaFin a la hora actual si no está ya seteada (ej. por URL)
+            // Si fechaFin no está seteada (ej. primera carga), la inicializamos a la hora actual.
             if (is_null($this->fechaFin)) {
-                $this->fechaFin = Carbon::now()->format('Y-m-d\TH:i'); // Hora actual para fechaFin
+                $this->fechaFin = Carbon::now()->format('Y-m-d\TH:i:s'); // Hora actual para fechaFin
             }
 
             // Lógica para fechaInicio, solo si no viene de la URL
@@ -94,55 +101,56 @@ trait HandlesStatsCalculations
                         ->first();
 
                     if ($ultimaLiquidacion && $ultimaLiquidacion->hasta) {
-                        $this->fechaInicio = Carbon::parse($ultimaLiquidacion->hasta)->addSecond()->format('Y-m-d\TH:i');
+                        $this->fechaInicio = Carbon::parse($ultimaLiquidacion->hasta)->addSecond()->format('Y-m-d\TH:i:s');
 
-                        // Si fechaInicio calculado es posterior a fechaFin (hora actual), ajustar.
                         $carbonFechaInicio = Carbon::parse($this->fechaInicio);
-                        $carbonFechaFin = Carbon::parse($this->fechaFin); // Ya es Carbon::now() o de la URL
+                        $carbonFechaFin = Carbon::parse($this->fechaFin);
+                        // Asegurarse de que fechaInicio no sea mayor que fechaFin (si fechaFin es la actual)
                         if ($carbonFechaInicio->greaterThan($carbonFechaFin)) {
-                            $this->fechaInicio = Carbon::today()->startOfDay()->format('Y-m-d\TH:i');
+                            $this->fechaInicio = Carbon::today()->startOfDay()->format('Y-m-d\TH:i:s');
                         }
                     } else {
-                        // No hay liquidaciones, usar inicio del día actual
-                        $this->fechaInicio = Carbon::today()->startOfDay()->format('Y-m-d\TH:i');
+                        // Si no hay liquidaciones previas, el inicio es el comienzo del día actual.
+                        $this->fechaInicio = Carbon::today()->startOfDay()->format('Y-m-d\TH:i:s');
                     }
                 } else {
-                    // No hay usuario seleccionado, usar inicio del día actual
-                    $this->fechaInicio = Carbon::today()->startOfDay()->format('Y-m-d\TH:i');
+                    // Si no hay usuario seleccionado, el inicio es el comienzo del día actual.
+                    $this->fechaInicio = Carbon::today()->startOfDay()->format('Y-m-d\TH:i:s');
                 }
             }
         } else {
-            // Si filtrarPorFecha es false (anulado por URL, ej. f=0)
+            // Si no se está filtrando por fecha, las fechas son nulas.
             $this->fechaInicio = null;
             $this->fechaFin = null;
         }
     }
+
     public function updatedFiltrarPorFecha(): void
     {
         if (!$this->filtrarPorFecha) {
             $this->fechaInicio = null;
             $this->fechaFin = null;
         } else {
-            $this->fechaInicio = Carbon::today()->startOfDay()->format('Y-m-d\TH:i');
-            $this->fechaFin = Carbon::now()->format('Y-m-d\TH:i'); // Hora actual para fechaFin
+            // Al cambiar a "Día Individual", establecer fechaInicio al inicio del día actual
+            // y fechaFin a la hora actual.
+            $this->fechaInicio = Carbon::today()->startOfDay()->format('Y-m-d\TH:i:s');
+            $this->fechaFin = Carbon::now()->format('Y-m-d\TH:i:s');
 
-            // Aplicar lógica de última liquidación si hay usuario seleccionado
             if ($this->usuarioSeleccionado) {
                 $ultimaLiquidacion = RegistroLiquidacion::where('user_id', $this->usuarioSeleccionado->id)
                     ->orderBy('hasta', 'desc')
                     ->first();
 
                 if ($ultimaLiquidacion && $ultimaLiquidacion->hasta) {
-                    $this->fechaInicio = Carbon::parse($ultimaLiquidacion->hasta)->addSecond()->format('Y-m-d\TH:i');
-
-                    // Si fechaInicio calculado es posterior a fechaFin (hora actual), ajustar.
-                    $carbonFechaInicio = Carbon::parse($this->fechaInicio);
-                    // $this->fechaFin ya es Carbon::now()
-                    if ($carbonFechaInicio->greaterThan(Carbon::parse($this->fechaFin))) {
-                        $this->fechaInicio = Carbon::today()->startOfDay()->format('Y-m-d\TH:i');
+                    $carbonFechaInicio = Carbon::parse($ultimaLiquidacion->hasta)->addSecond();
+                    // Si la última liquidación "hasta" es posterior a la hora actual,
+                    // establecemos el inicio del día para evitar rangos futuros.
+                    if ($carbonFechaInicio->greaterThan(Carbon::now())) {
+                        $this->fechaInicio = Carbon::today()->startOfDay()->format('Y-m-d\TH:i:s');
+                    } else {
+                        $this->fechaInicio = $carbonFechaInicio->format('Y-m-d\TH:i:s');
                     }
                 }
-                // Si no hay última liquidación, fechaInicio ya está como Carbon::today()->startOfDay()
             }
         }
         $this->computeStats();
@@ -156,6 +164,61 @@ trait HandlesStatsCalculations
     public function updatedFechaFin(): void
     {
         $this->computeStats();
+    }
+
+    public function reloadStats(): void
+    {
+
+        if ($this->usuarioSeleccionado) {
+            // Utilizamos una transacción por si en el futuro se añaden más operaciones.
+            \Illuminate\Support\Facades\DB::transaction(function () {
+                // Obtenemos el estado actual REAL de dinero_bases para el usuario.
+                // firstOrCreate es seguro, si no existe lo crea con valores por defecto.
+                $dineroBase = DineroBase::firstOrCreate(
+                    ['user_id' => $this->usuarioSeleccionado->id],
+                    ['monto' => 0, 'dinero_en_mano' => 0, 'monto_general' => 0]
+                );
+
+                // Preparamos el estado actual para guardarlo en los campos JSON.
+                $estadoActual = [
+                    'monto' => $dineroBase->monto,
+                ];
+
+                // Creamos el nuevo registro en el historial.
+                // Este registro no cambia ningún valor (monto es 0), pero su sola existencia
+                // con la fecha actual y los JSON correctos soluciona el problema de estado.
+                HistorialMovimiento::create([
+                    'user_id'       => $this->usuarioSeleccionado->id,
+                    'tipo'          => 'refresco_manual', // Un tipo descriptivo.
+                    'descripcion'   => 'Refresco manual del estado de caja para sincronización.',
+                    'monto'         => 0, // No hay impacto monetario.
+                    'fecha'         => now(),
+                    'referencia_id' => $this->usuarioSeleccionado->id, // Usamos el ID de usuario como referencia.
+                    'tabla_origen'  => 'dinero_bases',
+                    'es_edicion'    => true, // ¡MUY IMPORTANTE! Para que tu StatsService lo encuentre.
+                    'cambio_desde'  => json_encode($estadoActual), // El "antes" es el estado actual.
+                    'cambio_hacia'  => json_encode($estadoActual), // El "después" es el mismo estado actual.
+                ]);
+            });
+        }
+
+
+        // Lógica original del método (se mantiene igual)
+        if ($this->filtrarPorFecha) {
+            // Si está filtrando por fecha, actualiza fechaFin a la fecha y hora actual
+            $this->fechaFin = Carbon::now()->format('Y-m-d\TH:i:s'); // Incluye segundos para mayor precisión
+        }
+
+        // Siempre recalcula las estadísticas. Al hacerlo, StatsService ahora verá
+        // el nuevo registro que acabamos de crear como el más reciente.
+        $this->computeStats();
+
+        // Notificar al usuario que los datos se han recargado
+        Notification::make()
+            ->title('Datos Recargados y Sincronizados')
+            ->body('Las estadísticas han sido actualizadas y el estado de la caja ha sido sincronizado.')
+            ->success()
+            ->send();
     }
 
     public function computeStats(): void
@@ -181,7 +244,7 @@ trait HandlesStatsCalculations
         $this->totalPrestado = $stats['totalPrestado'];
         $this->totalComision = $stats['totalComision'];
         $this->prestamosEntregados = $stats['prestamosEntregados'];
-        $this->prestamosPendientes = $stats['prestamosPendientes']; // Asignar el nuevo valor
+        $this->prestamosPendientes = $stats['prestamosPendientes'];
         $this->totalPrestadoConInteres = $stats['totalPrestadoConInteres'];
         $this->cantidadRefinanciaciones = $stats['cantidadRefinanciaciones'];
         $this->cantidadRefinanciacionesPendientes = $stats['cantidadRefinanciacionesPendientes'];
@@ -189,9 +252,13 @@ trait HandlesStatsCalculations
         $this->valorRefinanciacionesConInteres = $stats['valorRefinanciacionesConInteres'];
         $this->deudaRefinanciadaTotal = $stats['deudaRefinanciadaTotal'];
         $this->deudaRefinanciadaInteresTotal = $stats['deudaRefinanciadaInteresTotal'];
-        
-        $this->dineroInicialDelUsuario = $stats['dineroInicial'];
+
+        $this->prestamosFinalizadosCount = $stats['prestamosFinalizadosCount'];
+
+        $this->ajustesDineroCount = $stats['ajustesDineroCount'];
+
+        $this->dineroInicial = $stats['dineroInicial'];
         $this->dineroCapital = $stats['dineroCapital'];
-        $this->dineroEnMano = $stats['dineroEnMano']; // Asignar el nuevo valor
+        $this->dineroEnMano = $stats['dineroEnMano'];
     }
 }

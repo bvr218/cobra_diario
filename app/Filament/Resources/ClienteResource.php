@@ -216,6 +216,7 @@ class ClienteResource extends Resource
                     ->label('Información de Préstamos')
                     ->html()
                     ->sortable()
+                    ->searchable()
                     ->formatStateUsing(function ($record) {
                         $prestamos = $record->prestamos;
 

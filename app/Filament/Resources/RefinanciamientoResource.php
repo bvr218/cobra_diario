@@ -31,6 +31,7 @@ class RefinanciamientoResource extends Resource
     {
         return $form
             ->schema([
+                // Forms\Components\DatePicker::make('authorized_at'),
                 Forms\Components\Select::make('prestamo_id')
                     ->label('Préstamo Asociado')
                     ->options(Prestamo::all()->mapWithKeys(function ($prestamo) {
@@ -45,6 +46,10 @@ class RefinanciamientoResource extends Resource
                 Forms\Components\TextInput::make('interes')
                     ->numeric()
                     ->suffix('%')
+                    ->required(),
+                Forms\Components\TextInput::make('numero_cuotas')
+                    ->numeric()
+                    ->label('Numero de Cuotas')
                     ->required(),
                 Forms\Components\Select::make('estado')
                     ->options([
@@ -61,6 +66,7 @@ class RefinanciamientoResource extends Resource
                     ->helperText('Si este seguro ya fue liquidado, no podrá ser editado')
                     ->disabled(fn ($get) => $get('comicion_borrada'))
                     ->dehydrated(fn ($get) => !$get('comicion_borrada')),
+                Forms\Components\Toggle::make('comicion_borrada'),
             ]);
     }
 
@@ -68,35 +74,55 @@ class RefinanciamientoResource extends Resource
     {
         return $table
             ->columns([
+                // Tables\Columns\TextColumn::make('comicion_borrada'),
                 Tables\Columns\TextColumn::make('prestamo.cliente.nombre')
                     ->label('Cliente')
                     ->sortable()
                     ->searchable(),
+                Tables\Columns\TextColumn::make('deuda_anterior')
+                    ->formatStateUsing(fn ($state) => '$' . number_format($state, 0, ',', '.') . ' COP')
+                    ->label('Deuda Anterior')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('valor')
                     ->formatStateUsing(fn ($state) => '$' . number_format($state, 0, ',', '.') . ' COP')
                     ->label('Valor Entregado')
+                    ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('interes')
                     ->suffix('%')
                     ->sortable()
+                    ->searchable()
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('total')
-                    ->label('Valor Con Interes')
-                    ->formatStateUsing(fn ($state) => '$' . number_format($state, 0, ',', '.') . ' COP')
+                // Tables\Columns\TextColumn::make('total')
+                //     ->label('Valor Con Interes')
+                //     ->formatStateUsing(fn ($state) => '$' . number_format($state, 0, ',', '.') . ' COP')
+                //     ->sortable()
+                //     ->toggleable(),
+                Tables\Columns\TextColumn::make('numero_cuotas')
+                    ->label('Número de Cuotas')
                     ->sortable()
-                    ->toggleable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('deuda_refinanciada')
                     ->formatStateUsing(fn ($state) => '$' . number_format($state, 0, ',', '.') . ' COP')
                     ->label('Deuda Sin Interes')
+                    ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('deuda_refinanciada_interes')
                     ->formatStateUsing(fn ($state) => '$' . number_format($state, 0, ',', '.') . ' COP')
                     ->label('Deuda Con Interes')
+                    ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('comicion')
                     ->label('Seguro')
+                    ->searchable()
                     ->formatStateUsing(fn ($state) => '$' . number_format($state, 0, ',', '.') . ' COP')
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\BooleanColumn::make('comicion_borrada')
+                    ->label('Seguro Borrado')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('estado')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
@@ -158,29 +184,29 @@ class RefinanciamientoResource extends Resource
                         'negado' => 'Negado',
                     ])
                     ->label('Filtrar por Estado'),
-                Tables\Filters\Filter::make('valor')
-                    ->form([
-                        Forms\Components\TextInput::make('valor_desde')
-                            ->numeric()
-                            ->label('Valor Desde'),
-                        Forms\Components\TextInput::make('valor_hasta')
-                            ->numeric()
-                            ->label('Valor Hasta'),
-                    ])
-                    ->query(function (Builder $query, array $data): Builder {
-                        return $query
-                            ->when(
-                                $data['valor_desde'],
-                                fn (Builder $query, $value): Builder => $query->where('valor', '>=', $value),
-                            )
-                            ->when(
-                                $data['valor_hasta'],
-                                fn (Builder $query, $value): Builder => $query->where('valor', '<=', $value),
-                            );
-                    }),
-                Tables\Filters\TernaryFilter::make('comicion_borrada')
-                    ->label('Seguro Cobrado')
-                    ->nullable(),
+                // Tables\Filters\Filter::make('valor')
+                //     ->form([
+                //         Forms\Components\TextInput::make('valor_desde')
+                //             ->numeric()
+                //             ->label('Valor Desde'),
+                //         Forms\Components\TextInput::make('valor_hasta')
+                //             ->numeric()
+                //             ->label('Valor Hasta'),
+                //     ])
+                //     ->query(function (Builder $query, array $data): Builder {
+                //         return $query
+                //             ->when(
+                //                 $data['valor_desde'],
+                //                 fn (Builder $query, $value): Builder => $query->where('valor', '>=', $value),
+                //             )
+                //             ->when(
+                //                 $data['valor_hasta'],
+                //                 fn (Builder $query, $value): Builder => $query->where('valor', '<=', $value),
+                //             );
+                //     }),
+                // Tables\Filters\TernaryFilter::make('comicion_borrada')
+                //     ->label('Seguro Cobrado')
+                //     ->nullable(),
             ])
             ->paginationPageOptions([10, 25, 50, 100, 500])
             ->defaultPaginationPageOption(25)

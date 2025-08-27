@@ -13,10 +13,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Filters\SelectFilter;
 use Spatie\Permission\Models\Role;
 use App\Filament\Resources\DineroBaseResource\Widgets\DineroBaseTotal;
+use Illuminate\Support\Facades\DB;
+use App\Models\AjusteDinero;
+use Filament\Notifications\Notification;
 
 // Importar los filtros y acciones necesarios para SoftDeletes
 use Filament\Tables\Filters\TrashedFilter;
-use Illuminate\Database\Eloquent\SoftDeletingScope; // Importar SoftDeletingScope
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class DineroBaseResource extends Resource
 {
@@ -114,12 +117,11 @@ class DineroBaseResource extends Resource
                     ->formatStateUsing(fn ($state) => '$' . number_format($state, 0, ',', '.'))
                     ->searchable()
                     ->sortable(),
-                // Nueva columna para ver la fecha de eliminación (opcional, pero útil)
                 Tables\Columns\TextColumn::make('deleted_at')
                     ->label('Eliminado en')
                     ->dateTime()
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true), // Oculta por defecto, se puede mostrar
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('roles')
@@ -129,64 +131,87 @@ class DineroBaseResource extends Resource
                         ? $query->whereHas('user.roles', fn (Builder $q) => $q->where('name', $data['value']))
                         : $query),
 
-                // Nuevo filtro para SoftDeletes
-                TrashedFilter::make(), // Este filtro por defecto tiene 3 opciones: 'Not trashed', 'Trashed', 'All'
+                // // Filtro para SoftDeletes
+                // TrashedFilter::make(),
             ])
             ->paginationPageOptions([10, 25, 50, 100, 500])
             ->defaultPaginationPageOption(25)
             ->defaultSort('created_at', 'desc')
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\Action::make('agregar_dinero')
-                    ->label('Agregar Dinero')
-                    ->icon('heroicon-o-plus-circle')
-                    ->color('success')
+                Tables\Actions\Action::make('ajustar_dinero')
+                    ->label('Ajustar Dinero')
+                    ->icon('heroicon-o-pencil-square')
+                    ->color('info')
                     ->form([
                         \Filament\Forms\Components\TextInput::make('monto')
-                            ->label('Monto a agregar')
+                            ->label('Monto a ajustar')
                             ->numeric()
                             ->required()
-                            ->placeholder('Puede agregar valores negativos o positivos'),
+                            ->helperText('Usa valores positivos para agregar y negativos para restar.'),
+                        Forms\Components\Textarea::make('descripcion')
+                            ->label('Descripción del ajuste')
+                            ->required()
+                            ->minLength(10)
+                            ->maxLength(255),
                     ])
                     ->action(function (array $data, DineroBase $record): void {
-                        $montoAAgregar = (float) $data['monto'];
-                        $record->monto += $montoAAgregar;
-                        $record->monto_general += $montoAAgregar;
+                        $montoAjuste = (float) $data['monto'];
+                        $descripcion = $data['descripcion'];
 
-                        // Solo suma a monto_inicial si el monto a agregar es positivo
-                        if ($montoAAgregar > 0) {
-                            $record->monto_inicial += $montoAAgregar;
-                        }
+                        DB::transaction(function () use ($record, $montoAjuste, $descripcion) {
+                            // 1. Capturar estado ANTES del cambio
+                            $estadoAntes = $record->only(['monto', 'monto_general', 'dinero_en_mano', 'monto_inicial']);
 
-                        $record->save();
+                            // 2. Aplicar el cambio
+                            $record->monto += $montoAjuste;
+                            $record->monto_general += $montoAjuste;
+                            
+                            if ($montoAjuste > 0) {
+                                $record->monto_inicial += $montoAjuste;
+                            }
+                            $record->save();
 
-                        \Filament\Notifications\Notification::make() // NOSONAR
-                            ->title('Monto actualizado correctamente')
+                            // 3. Capturar estado DESPUÉS del cambio
+                            $estadoDespues = $record->only(['monto', 'monto_general', 'dinero_en_mano', 'monto_inicial']);
+
+                            // 4. Crear el registro de auditoría
+                            AjusteDinero::create([
+                                'user_id' => $record->user_id,
+                                'ajustado_por_id' => auth()->id(),
+                                'dinero_base_antes' => $estadoAntes,
+                                'dinero_base_despues' => $estadoDespues,
+                                'monto_ajuste' => $montoAjuste,
+                                'tipo_ajuste' => $montoAjuste >= 0 ? 'positivo' : 'negativo',
+                                'descripcion' => $descripcion,
+                            ]);
+                        });
+
+                        Notification::make()
+                            ->title('Dinero ajustado correctamente')
                             ->success()
                             ->send();
                     }),
                 // Acciones de Restauración y Eliminación Permanente
-                Tables\Actions\RestoreAction::make(), // Para restaurar un registro individual
-                Tables\Actions\ForceDeleteAction::make(), // Para eliminar un registro individual permanentemente
+                Tables\Actions\RestoreAction::make(),
+                Tables\Actions\ForceDeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(), // Eliminar registros lógicamente
-                    Tables\Actions\RestoreBulkAction::make(), // Restaurar registros masivamente
-                    Tables\Actions\ForceDeleteBulkAction::make(), // Eliminar registros masivamente permanentemente
-                ]),
+                // Tables\Actions\BulkActionGroup::make([
+                //     Tables\Actions\DeleteBulkAction::make(),
+                //     Tables\Actions\RestoreBulkAction::make(),
+                //     Tables\Actions\ForceDeleteBulkAction::make(),
+                // ]),
             ]);
     }
 
-    // Sobrescribir el método getEloquentQuery para incluir los soft deletes en la consulta base
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
             ->withoutGlobalScopes([
-                SoftDeletingScope::class, // Asegura que el filtro TrashedFilter funcione correctamente
+                SoftDeletingScope::class,
             ]);
     }
-
 
     public static function getRelations(): array
     {
@@ -203,5 +228,4 @@ class DineroBaseResource extends Resource
             'edit' => Pages\EditDineroBase::route('/{record}/edit'),
         ];
     }
-
 }

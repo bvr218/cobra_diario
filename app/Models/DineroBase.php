@@ -27,4 +27,15 @@ class DineroBase extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    
+    public static function getColumnLabels(): array
+    {
+        return [
+            'monto_inicial'  => 'Monto inicial',
+            'monto_general'  => 'Monto Capital',
+            'dinero_en_mano' => 'Dinero en Caja',
+            'monto'          => 'Dinero en mano',
+        ];
+    }
 }

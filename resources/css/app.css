@@ -1,12 +1,20 @@
 /* resources/css/app.css */
 
 /* Importa tus estilos personalizados para liquidación */
+
+@import 'monthly-liquidation.css';
+
 @import 'liquidacion.css';
 
-/* Importa tus estilos personalizados para Filament */
-/* @import 'custom-filament.css'; ¡Añade esta línea! */
 
 @import 'generarPago.css';
+
+@import 'registro-liquidacion.css';
+
+
+
+
+
 
 /* Importar las configuraciones de Tailwind */
 @tailwind base;

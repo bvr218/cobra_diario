@@ -785,3 +785,327 @@
     background-color: #fd7c7c; /* Otro tono de rojo */
     border-left: 5px solid #ef4444; /* Un borde rojo a la izquierda */
 }
+
+/* Botón de Recarga */
+.reload-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.625rem 1.25rem; /* 10px 20px */
+    font-size: 0.875rem; /* 14px */
+    font-weight: 600;
+    line-height: 1.25rem; /* 20px */
+    color: #ffffff; /* Texto blanco */
+    background-color: #3b82f6; /* Azul primario de Filament (puedes ajustarlo) */
+    border-radius: 0.375rem; /* 6px */
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    text-decoration: none; /* Asegura que no tenga subrayado si es un <a> */
+}
+
+.reload-button:hover {
+    background-color: #2563eb; /* Azul un poco más oscuro al pasar el ratón */
+}
+
+.reload-button:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #bfdbfe; /* Anillo de foco */
+}
+
+/* Estilos para el icono dentro del botón */
+.reload-button svg {
+    width: 1.25rem; /* 20px */
+    height: 1.25rem; /* 20px */
+    margin-right: 0.5rem; /* Espacio entre icono y texto */
+    color: currentColor; /* El icono hereda el color del texto del botón */
+}
+
+.date-and-button-wrapper {
+    display: flex; /* Habilitar Flexbox */
+    flex-direction: column; /* Por defecto, apilarlos verticalmente en móviles */
+    gap: 1rem; /* Espacio entre los elementos (selector de fecha y botón) */
+    align-items: flex-start; /* Alinear elementos al inicio del eje cruzado */
+    margin-top: 1rem; /* Margen superior para separarlo de elementos anteriores */
+}
+
+/* En pantallas más grandes (ej. 768px o más, similar a 'md' en Tailwind) */
+@media (min-width: 768px) {
+    .date-and-button-wrapper {
+        flex-direction: row; /* En escritorio, colocarlos en fila */
+        align-items: flex-end; /* Alinear los elementos a la base para que los inputs estén alineados con el botón */
+        justify-content: space-between; /* Espaciar el selector de fecha del botón */
+    }
+
+    /* Asegurar que el contenedor del selector de fecha no ocupe todo el ancho
+       y permita al botón estar al lado */
+    .date-selector-container {
+        flex-grow: 1; /* Permite que el selector de fecha crezca */
+        margin-right: 1rem; /* Espacio entre el selector y el botón en escritorio */
+        align-items: flex-end;
+    }
+}
+
+.chart-modal-body {
+    overflow-y: auto; /* Habilita el scroll vertical */
+}
+
+
+/* Estilo para la cabecera (thead) pegajosa */
+.table-header-sticky {
+    position: sticky;
+    top: 0; /* Pega la cabecera en la parte superior */
+    z-index: 10; /* Se asegura que esté por encima del cuerpo de la tabla */
+    background-color: #f9fafb; /* Color de fondo para modo claro (Tailwind bg-gray-50) */
+}
+
+/* Estilo para el pie de tabla (tfoot) pegajoso */
+.table-footer-sticky {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background-color: #f3f4f6;
+    border-top: 2px solid #e5e7eb; /* Borde superior para separar */
+}
+
+/* Celdas del pie de tabla (td) */
+.table-footer-sticky td {
+    font-weight: 600; /* Texto en negrita (Tailwind font-bold) */
+    font-size: 0.875rem; /* Tamaño de fuente (Tailwind text-sm) */
+    color: #111827; /* Color de texto oscuro (Tailwind text-gray-900) */
+    padding: 0.75rem 1rem; /* Espaciado interno (Tailwind px-4 py-3) */
+}
+
+
+/* --- Estilos para Modo Oscuro --- */
+
+/* Cabecera pegajosa en modo oscuro */
+.dark .table-header-sticky {
+    background-color: #374151; /* Color de fondo (Tailwind dark:bg-gray-700) */
+}
+
+/* Pie de tabla pegajoso en modo oscuro */
+.dark .table-footer-sticky {
+    background-color: #1f2937;
+    border-top-color: #4b5563; /* Borde superior para separar en modo oscuro */
+}
+
+/* Celdas del pie de tabla en modo oscuro */
+.dark .table-footer-sticky td {
+    color: #ffffff; /* Color de texto blanco (Tailwind dark:text-white) */
+}
+.list-modal-wrapper {
+    margin-top: 1.5rem;
+}
+
+/* Fondo oscuro semi-transparente que cubre toda la pantalla */
+.chart-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(17, 24, 39, 0.5); /* Equivalente a bg-gray-900 bg-opacity-50 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+}
+.dark .chart-modal-backdrop {
+    background-color: rgba(17, 24, 39, 0.8); /* Equivalente a dark:bg-opacity-80 */
+}
+
+/* El contenedor principal del contenido del modal */
+.chart-modal-content {
+    background-color: var(--bg-light);
+    border-radius: 0.5rem; /* rounded-lg */
+    box-shadow: 0 10px 15px -3px var(--shadow-color-light), 0 4px 6px -4px var(--shadow-color-light); /* shadow-xl */
+    width: 100%;
+    max-width: 42rem; /* max-w-2xl */
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+.dark .chart-modal-content {
+    background-color: var(--bg-dark);
+    box-shadow: 0 10px 15px -3px var(--shadow-color-dark), 0 4px 6px -4px var(--shadow-color-dark);
+}
+
+/* Cabecera del modal */
+.chart-modal-header {
+    padding: 1rem 1.5rem; /* px-6 py-4 */
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+.dark .chart-modal-header {
+    border-color: var(--border-dark);
+}
+
+/* Título en la cabecera */
+.chart-modal-title {
+    font-size: 1.125rem; /* text-lg */
+    font-weight: 600; /* font-semibold */
+    color: var(--text-light);
+}
+.dark .chart-modal-title {
+    color: var(--text-dark);
+}
+
+/* Botón de cerrar (X) en la cabecera */
+.chart-modal-close-button {
+    font-size: 1.5rem;
+    line-height: 1;
+    color: #9ca3af; /* text-gray-400 */
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.2s ease-in-out;
+}
+.chart-modal-close-button:hover {
+    color: #4b5563; /* hover:text-gray-600 */
+}
+.dark .chart-modal-close-button:hover {
+    color: #d1d5db; /* dark:hover:text-gray-200 */
+}
+
+/* Cuerpo del modal (donde va la tabla) */
+.chart-modal-body {
+    overflow-y: auto;
+    flex-grow: 1;
+}
+
+/* Tabla principal */
+.chart-modal-table {
+    min-width: 100%;
+    border-collapse: collapse; /* Reemplaza a divide-y */
+    border-spacing: 0;
+}
+
+/* Celdas de la cabecera (th) */
+.chart-modal-th {
+    padding: 0.5rem 1rem; /* px-4 py-2 */
+    text-align: left;
+    font-size: 0.75rem; /* text-xs */
+    font-weight: 500; /* font-medium */
+    color: #6b7281; /* text-gray-500 */
+    text-transform: uppercase;
+    letter-spacing: 0.05em; /* tracking-wider */
+    border-bottom: 1px solid var(--border-light);
+}
+.dark .chart-modal-th {
+    color: #9ca3af; /* dark:text-gray-300 */
+    border-color: var(--border-dark);
+}
+
+/* Cuerpo de la tabla */
+.chart-modal-tbody {
+    background-color: var(--bg-light);
+}
+.dark .chart-modal-tbody {
+    background-color: var(--bg-dark);
+}
+
+/* Filas de la tabla (tr) */
+.chart-modal-tbody tr {
+    border-bottom: 1px solid var(--border-light);
+}
+.dark .chart-modal-tbody tr {
+    border-color: var(--border-dark);
+}
+.chart-modal-tbody tr:last-child {
+    border-bottom: none;
+}
+
+/* Fila clickeable */
+.chart-modal-tr-clickable {
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+.chart-modal-tr-clickable:hover {
+    background-color: #f3f4f6; /* hover:bg-gray-100 */
+}
+.dark .chart-modal-tr-clickable:hover {
+    background-color: #374151; /* dark:hover:bg-gray-700 */
+}
+
+/* Celdas de datos (td) */
+.chart-modal-td {
+    padding: 0.75rem 1rem; /* px-4 py-3 */
+    font-size: 0.875rem; /* text-sm */
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+/* Texto principal dentro de una celda */
+.chart-modal-text-strong {
+    color: var(--text-light);
+    font-weight: 500;
+}
+.dark .chart-modal-text-strong {
+    color: var(--text-dark);
+}
+
+/* Texto secundario (para valores numéricos y fechas) */
+.chart-modal-text-secondary {
+    color: #6b7281; /* text-gray-500 */
+}
+.dark .chart-modal-text-secondary {
+    color: #9ca3af; /* dark:text-gray-300 */
+}
+
+/* Enlaces dentro de la tabla */
+.chart-modal-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+}
+.chart-modal-link:hover {
+    text-decoration: underline;
+}
+
+/* Mensaje cuando no hay datos en la tabla */
+.chart-modal-empty-message {
+    font-size: 0.875rem; /* text-sm */
+    text-align: center;
+    color: #6b7281; /* text-gray-500 */
+    padding: 1.5rem;
+}
+.dark .chart-modal-empty-message {
+    color: #9ca3af; /* dark:text-gray-400 */
+}
+
+/* Pie de página del modal */
+.chart-modal-footer {
+    padding: 1rem 1.5rem; /* px-6 py-4 */
+    text-align: right;
+    background-color: #f9fafb; /* bg-gray-50 */
+    border-top: 1px solid var(--border-light);
+    flex-shrink: 0;
+}
+.dark .chart-modal-footer {
+    background-color: #1f2937; /* dark:bg-gray-700 */
+    border-top-color: var(--border-dark);
+}
+
+/* Botón de cerrar en el pie de página */
+.chart-modal-footer-button {
+    padding: 0.5rem 1rem; /* px-4 py-2 */
+    background-color: #e5e7eb; /* bg-gray-200 */
+    color: #1f2937; /* text-gray-800 */
+    border: none;
+    border-radius: 0.375rem; /* rounded-md */
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+.chart-modal-footer-button:hover {
+    background-color: #d1d5db; /* hover:bg-gray-300 */
+}
+.dark .chart-modal-footer-button {
+    background-color: #4b5563; /* dark:bg-gray-600 */
+    color: #e5e7eb; /* dark:text-gray-200 */
+}
+.dark .chart-modal-footer-button:hover {
+    background-color: #6b7281; /* dark:hover:bg-gray-500 */
+}
+

@@ -4,74 +4,111 @@ namespace App\Livewire;
 
 use Livewire\Component;
 use App\Models\User;
+use App\Models\DineroBase;
+use App\Models\AjusteDinero;
 use Filament\Notifications\Notification;
-use Livewire\Attributes\On; // Importar el atributo On
+use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\On;
 
 class AdjustMoneyModal extends Component
 {
     public bool $showAdjustMoneyModal = false;
     public ?float $amountToAdjust = null;
-    public ?int $userId = null; // Para guardar el ID del usuario seleccionado
-    public ?string $usuarioSeleccionadoName = ''; // Para mostrar en el modal
+    public ?int $userId = null;
+    public ?string $usuarioSeleccionadoName = '';
+    public ?string $descripcion = null; // <-- NUEVA PROPIEDAD para la descripción
 
-    protected \App\Filament\Actions\AdjustDineroBaseAction $adjustDineroBaseAction; // Asegúrate de importar la clase correcta
-
-    public function boot(\App\Filament\Actions\AdjustDineroBaseAction $adjustDineroBaseAction): void
-    {
-        $this->adjustDineroBaseAction = $adjustDineroBaseAction;
-    }
-
-    #[On('openAdjustMoneyModal')] // Escucha el evento 'openAdjustMoneyModal'
+    #[On('openAdjustMoneyModal')]
     public function openModal(int $userId): void
     {
         $this->userId = $userId;
         $user = User::find($userId);
         $this->usuarioSeleccionadoName = $user ? $user->name : '';
-        $this->amountToAdjust = null;
+        // Reseteamos los campos del formulario
+        $this->reset(['amountToAdjust', 'descripcion']);
         $this->showAdjustMoneyModal = true;
     }
 
     public function closeModal(): void
     {
         $this->showAdjustMoneyModal = false;
-        $this->reset(['amountToAdjust', 'userId', 'usuarioSeleccionadoName']);
+        $this->reset(['amountToAdjust', 'userId', 'usuarioSeleccionadoName', 'descripcion']);
     }
 
     public function adjustDineroBase(): void
     {
+        // === VALIDACIÓN ACTUALIZADA ===
         $this->validate([
-            'amountToAdjust' => 'required|numeric|not_in:0', // Permite números negativos, pero no cero
-            'userId' => 'required|exists:users,id', // Asegurarse de que el usuario exista
+            'amountToAdjust' => 'required|numeric|not_in:0',
+            'descripcion'    => 'required|string|min:10|max:255',
+            'userId'         => 'required|exists:users,id',
+        ], [
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'descripcion.min' => 'La descripción debe tener al menos 10 caracteres.',
+            'amountToAdjust.required' => 'El monto es obligatorio.',
+            'amountToAdjust.not_in' => 'El monto no puede ser cero.',
         ]);
 
         $user = User::find($this->userId);
-
         if (!$user) {
-            Notification::make()
-                ->title('Error')
-                ->body('Usuario no encontrado.')
-                ->danger()
-                ->send();
+            Notification::make()->title('Error')->body('Usuario no encontrado.')->danger()->send();
             $this->closeModal();
             return;
         }
 
-        $isPositive = $this->amountToAdjust > 0;
-        $actualAmount = abs($this->amountToAdjust);
+        try {
+            // === LÓGICA DE AJUSTE Y AUDITORÍA DENTRO DE UNA TRANSACCIÓN ===
+            DB::transaction(function () use ($user) {
+                $dineroBase = DineroBase::firstOrCreate(
+                    ['user_id' => $user->id],
+                    ['monto' => 0, 'monto_general' => 0, 'monto_inicial' => 0, 'dinero_en_mano' => 0]
+                );
 
-        $this->adjustDineroBaseAction->execute(
-            $user,
-            $actualAmount,
-            $isPositive
-        );
+                // 1. Capturar estado ANTES del cambio
+                $estadoAntes = $dineroBase->only(['monto', 'monto_general', 'dinero_en_mano', 'monto_inicial']);
 
-        Notification::make()
-            ->title('Dinero base ajustado correctamente.')
-            ->success()
-            ->send();
+                // 2. Aplicar el cambio al dinero base
+                $dineroBase->monto += $this->amountToAdjust;
+                $dineroBase->monto_general += $this->amountToAdjust;
 
-        $this->dispatch('statsUpdated'); // Notifica al componente padre para recalcular estadísticas
-        $this->closeModal();
+                if ($this->amountToAdjust > 0) {
+                    $dineroBase->monto_inicial += $this->amountToAdjust;
+                }
+                
+                $dineroBase->save();
+
+                // 3. Capturar estado DESPUÉS del cambio (refrescando el modelo)
+                $estadoDespues = $dineroBase->fresh()->only(['monto', 'monto_general', 'dinero_en_mano', 'monto_inicial']);
+
+                // 4. Crear el registro de auditoría en la nueva tabla
+                AjusteDinero::create([
+                    'user_id'           => $user->id,
+                    'ajustado_por_id'   => auth()->id(),
+                    'dinero_base_antes' => $estadoAntes,
+                    'dinero_base_despues' => $estadoDespues,
+                    'monto_ajuste'      => $this->amountToAdjust,
+                    'tipo_ajuste'       => $this->amountToAdjust > 0 ? 'positivo' : 'negativo',
+                    'descripcion'       => $this->descripcion,
+                ]);
+            });
+
+            Notification::make()
+                ->title('Dinero base ajustado')
+                ->body('El ajuste se ha realizado y registrado exitosamente.')
+                ->success()
+                ->send();
+
+            $this->dispatch('dineroBaseAdjusted'); // Usamos un evento más específico
+            $this->dispatch('statsUpdated'); // Mantenemos este por si otros componentes lo usan
+            $this->closeModal();
+
+        } catch (\Exception $e) {
+            Notification::make()
+                ->title('Error al ajustar dinero')
+                ->body('Ocurrió un error: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 
     public function render()

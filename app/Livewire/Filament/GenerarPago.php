@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Auth; // Importar Auth para permisos
 use Illuminate\Support\Facades\DB; // Importar DB para transacciones
 use Illuminate\Support\Collection; // Importar la clase Collection
 
+//app/livewire/filament/GenerarPago.php
+
 class GenerarPago extends Component
 {
     public $position = 1;
@@ -38,6 +40,7 @@ class GenerarPago extends Component
 
     // Para la edición de datos del cliente
     public bool $editandoCliente = false;
+    public bool $infoDesplegada = false;
     public ?string $edit_cliente_nombre = null;
     public ?string $edit_cliente_direccion = null;
     public ?string $edit_cliente_telefono = null;
@@ -51,6 +54,7 @@ class GenerarPago extends Component
     public $ref_valor = null;
     public $ref_interes = null;
     public $ref_comicion = null;
+    public $ref_numero_cuotas = null;
     public ?string $ref_descripcion_cliente = null;
 
     // Propiedad para almacenar la colección de préstamos filtrados en PHP
@@ -66,6 +70,11 @@ class GenerarPago extends Component
     public ?string $activeLoanListType = null; // 'vencidos', 'aldia', o null
     public Collection $loanList;
 
+    public float $totalDeudaInicial = 0;
+    public float $totalDeudaActual = 0;
+    public float $totalValorCuota = 0;
+    public float $totalUltimaCuota = 0;
+
 
     protected function rules()
     {
@@ -74,6 +83,7 @@ class GenerarPago extends Component
             'cliente_descripcion' => 'nullable|string|max:255',
             'ref_valor'           => 'required|numeric|min:0',
             'ref_interes'         => 'required|numeric|min:0',
+            'ref_numero_cuotas'   => 'required|integer|min:1',
             'ref_comicion'        => 'required|numeric|min:0',
             'ref_descripcion_cliente' => 'nullable|string|max:255',
             'edit_cliente_nombre'    => 'required|string|max:255',
@@ -96,9 +106,10 @@ class GenerarPago extends Component
             'ref_interes.required'      => 'El interés es obligatorio.',
             'ref_interes.numeric'       => 'El interés debe ser numérico.',
             'ref_interes.min'           => 'El interés no puede ser negativo.',
-            'ref_comicion.required'     => 'La comisión es obligatoria.',
-            'ref_comicion.numeric'      => 'La comisión debe ser numérica.',
-            'ref_comicion.min'          => 'La comisión no puede ser negativa.',
+            'ref_numero_cuotas.required' => 'El número de cuotas es obligatorio.',
+            'ref_comicion.required'     => 'EL seguro es obligatoria.',
+            'ref_comicion.numeric'      => 'El seguro debe ser numérico.',
+            'ref_comicion.min'          => 'El seguro no puede ser negativo.',
             'ref_descripcion_cliente.max' => 'La descripción no puede exceder los 255 caracteres.',
             'edit_cliente_nombre.required' => 'El nombre del cliente es obligatorio.',
             'edit_cliente_telefono.required' => 'El teléfono del cliente es obligatorio.',
@@ -211,6 +222,59 @@ class GenerarPago extends Component
         }
     }
 
+    /**
+     * Centraliza el cálculo del número de cuota y la preparación del historial
+     * basándose en el último refinanciamiento autorizado.
+     */
+    private function recalcularDatosDeCuotas()
+    {
+        if (!$this->prestamo) {
+            $this->historialAbonos = collect();
+            return;
+        }
+
+        // 1. Determinar la fecha de inicio para el conteo (sin cambios)
+        $ultimoRefinanciamientoAutorizado = $this->prestamo->refinanciamientos
+                                                ->where('estado', 'autorizado')
+                                                ->sortByDesc('created_at')
+                                                ->first();
+
+        $fechaFiltro = $ultimoRefinanciamientoAutorizado
+            ? $ultimoRefinanciamientoAutorizado->created_at
+            : $this->prestamo->created_at;
+
+        // 2. Obtener los abonos relevantes desde la BD (sin cambios)
+        $abonosRelevantes = Abono::where('prestamo_id', $this->prestamo->id)
+                                ->where('created_at', '>=', $fechaFiltro)
+                                ->get();
+
+        // 3. Calcular el número de la SIGUIENTE cuota a crear (sin cambios)
+        $this->numero_cuota = $abonosRelevantes->count() + 1;
+
+        // 4. --- LÓGICA DE NUMERACIÓN CORREGIDA ---
+        // Primero, ordenamos los abonos cronológicamente (el más antiguo primero)
+        // para establecer la secuencia correcta: 1, 2, 3...
+        $historialCronologico = $abonosRelevantes->sortBy('created_at');
+
+        // 5. Mapeamos sobre la lista cronológica para asignar el número de cuota correcto.
+        // El índice (que empieza en 0) + 1 nos da el número de cuota secuencial.
+        $historialConNumeros = $historialCronologico->map(function ($abono, $index) {
+            return [
+                'monto_abono' => $abono->monto_abono,
+                'created_at'  => $abono->created_at,
+                'numero_cuota_calculado' => $index + 1, // ¡Esta es la lógica correcta!
+            ];
+        });
+
+        // 6. Finalmente, invertimos la colección para que en la VISTA se muestre
+        // el abono más reciente (con el número de cuota más alto) en la parte superior.
+        // Usamos values() para re-indexar el array, lo cual es una buena práctica.
+        $this->historialAbonos = collect($historialConNumeros->reverse()->values());
+
+        // 7. Asignar el último abono y la fecha de inicio (sin cambios)
+        $this->ultimoAbono = $historialCronologico->last(); // El último en la lista cronológica es el más reciente.
+        $this->fecha_inicio_real = $fechaFiltro->format('d/m/Y H:i');
+    }
 
     protected function resetValues($resetMontoAbono = false)
     {
@@ -287,10 +351,9 @@ class GenerarPago extends Component
 
 
     public function loadByPosition($preserveSearchTerm = false) {
-        // Asegurarse de que el modo de edición se cancele al cambiar de préstamo.
         $this->cancelarEdicionCliente();
+        $this->infoDesplegada = false;
 
-        // Asegurarse de que la colección de préstamos filtrados esté cargada
         if (!isset($this->allFilteredLoans)) {
             $this->loadAndFilterLoansCollection();
         }
@@ -301,78 +364,49 @@ class GenerarPago extends Component
             return;
         }
 
-        // Mantener el término de búsqueda si estamos en modo de búsqueda
         if (!$preserveSearchTerm) {
-            $this->searchTerm = ''; // Reset search term when navigating with prev/next or on initial load
+            $this->searchTerm = '';
         }
 
-        // Ajustar posición para que siempre esté entre 1 y totalPrestamos
         if ($this->position > $this->totalPrestamos) {
             $this->position = $this->totalPrestamos;
         }
         $this->position = max(1, $this->position);
 
-        // Obtener el préstamo de la colección filtrada y ya ordenada por 'posicion_ruta'
         $this->prestamo = $this->allFilteredLoans->values()->get($this->position - 1);
 
-
         if ($this->prestamo) {
-            $this->deuda_actual        = $this->prestamo->deuda_actual;
-            $this->monto_por_cuota     = $this->prestamo->monto_por_cuota;
-            // Usar el accesor next_payment directamente del modelo
-            $this->next_payment        = optional($this->prestamo->next_payment)->format('Y-m-d');
-
-            // Cargar descripción del cliente
+            // Carga de datos básicos del préstamo
+            $this->deuda_actual = $this->prestamo->deuda_actual;
+            $this->monto_por_cuota = $this->prestamo->monto_por_cuota;
+            $this->next_payment = optional($this->prestamo->next_payment)->format('Y-m-d');
             $this->cliente_descripcion = $this->prestamo->cliente->descripcion ?? '';
+            
+            $hoy = Carbon::today();
+            $fechaPago = $this->prestamo->next_payment ?? $hoy;
+            $this->dias = $hoy->diffInDays($fechaPago, false);
 
-            // Calcular días vencidos/faltantes
-            $hoy         = Carbon::today();
-            // Accede al accesor directamente
-            $fechaPago   = $this->prestamo->next_payment ?? $hoy;
-            $this->dias  = $hoy->diffInDays($fechaPago, false);
-
-            // Lógica para determinar la deuda inicial a mostrar
+            // Lógica existente para deuda inicial (es correcta y se mantiene)
             $ultimoRefinanciamientoAutorizado = $this->prestamo->refinanciamientos
                                                     ->where('estado', 'autorizado')
                                                     ->sortByDesc('id')
                                                     ->first();
-
             if ($ultimoRefinanciamientoAutorizado) {
-                // Si hay un refinanciamiento autorizado, la "deuda inicial" a mostrar es la deuda_refinanciada_interes del último.
                 $this->deuda_inicial = $ultimoRefinanciamientoAutorizado->deuda_refinanciada_interes ?? 0;
             } else {
-                // Si no hay refinanciamientos, la "deuda inicial" es el valor del préstamo con interés original.
                 $this->deuda_inicial = $this->prestamo->valor_prestado_con_interes ?? 0;
             }
 
-            // Siguiente número de cuota
-            $maxCuota           = Abono::where('prestamo_id', $this->prestamo->id)->max('numero_cuota');
-            $this->numero_cuota = $maxCuota ? $maxCuota + 1 : 1;
-
-            // Calcular nuevo saldo
+            // --- LLAMADA AL NUEVO MÉTODO CENTRALIZADO ---
+            // Reemplaza toda la lógica anterior de cálculo de cuota e historial.
+            $this->recalcularDatosDeCuotas();
+            
+            // Calcular nuevo saldo después de tener los datos
             $this->actualizarNuevoSaldo();
 
-            // Cargar último abono e historial de abonos
-            if ($this->prestamo->relationLoaded('abonos')) {
-                $this->ultimoAbono = $this->prestamo->abonos->sortByDesc('created_at')->first();
-                $this->historialAbonos = $this->prestamo->abonos->sortByDesc('created_at');
-            }
-
-            // Cargar fecha de inicio real (para el modal informativo)
-            $this->prestamo->loadMissing('refinanciamientos');
-            $ultimoRefinanciamiento = $this->prestamo->refinanciamientos->sortByDesc('created_at')->first();
-
-            if ($ultimoRefinanciamiento) {
-                $this->fecha_inicio_real = $ultimoRefinanciamiento->created_at->format('d/m/Y H:i');
-            } else {
-                $this->fecha_inicio_real = $this->prestamo->created_at->format('d/m/Y H:i');
-            }
-
         } else {
-            // Casos raros: si no se encontró préstamo, resetear y forzar recarga
             $this->resetValues(true);
             session()->flash('warning', 'No se encontró un préstamo en la posición actual con los filtros aplicados.');
-
             if ($this->totalPrestamos > 0 && $this->position !== 1) {
                 $this->position = 1;
                 $this->loadByPosition();
@@ -550,18 +584,17 @@ class GenerarPago extends Component
      */
     public function iniciarConfirmacion()
     {
-        // 1. Validar los campos primero. Si falla, Livewire detiene la ejecución
-        // y muestra los errores en el frontend.
         $this->validateOnly('monto_abono');
 
-        // 2. Si la deuda ya está a cero, no permitir el abono ni abrir el modal
         if ($this->deuda_actual <= 0) {
             session()->flash('warning', 'El préstamo ya está finalizado. No se pueden registrar más pagos.');
-            $this->confirmandoAbono = false; // Asegurarse de que el modal esté cerrado por si acaso
-            return; // Detener la ejecución aquí
+            $this->confirmandoAbono = false;
+            return;
         }
+        
+        // Se vuelve a llamar para asegurar que el número de cuota en el modal de confirmación es 100% actual.
+        $this->recalcularDatosDeCuotas();
 
-        // 3. Si la validación pasó y hay deuda, recalcular el saldo y abrir el modal
         $this->actualizarNuevoSaldo();
         $this->confirmandoAbono = true;
     }
@@ -573,43 +606,49 @@ class GenerarPago extends Component
 
     public function guardar()
     {
-        // Esta validación ya se hizo en iniciarConfirmacion(), pero se mantiene la verificación de deuda actual
-        // por si acaso, aunque el botón de guardar está en el modal que solo se abre si ya se validó.
         if ($this->deuda_actual <= 0) {
             session()->flash('warning', 'El préstamo ya está finalizado. No se pueden registrar más pagos.');
             $this->confirmandoAbono = false;
             return;
         }
 
-        // NOTA: La validación principal del monto_abono se hace en iniciarConfirmacion().
-        // No es necesario llamar a $this->validateOnly('monto_abono'); aquí de nuevo.
-
         try {
-            \DB::transaction(function () {
+            DB::transaction(function () {
+                // Se recalcula el número de cuota DENTRO de la transacción para máxima seguridad y evitar
+                // condiciones de carrera si dos usuarios intentan pagar al mismo tiempo.
+                $prestamoActual = Prestamo::with('refinanciamientos')->find($this->prestamo->id);
+                
+                $ultimoRefinanciamientoAutorizado = $prestamoActual->refinanciamientos
+                                                        ->where('estado', 'autorizado')
+                                                        ->sortByDesc('created_at')
+                                                        ->first();
+
+                $fechaFiltro = $ultimoRefinanciamientoAutorizado
+                    ? $ultimoRefinanciamientoAutorizado->created_at
+                    : $prestamoActual->created_at;
+
+                $conteoAbonosRelevantes = Abono::where('prestamo_id', $prestamoActual->id)
+                                              ->where('created_at', '>=', $fechaFiltro)
+                                              ->count();
+                                              
+                $numeroCuotaParaGuardar = $conteoAbonosRelevantes + 1;
+
+                // Creación del abono con el número de cuota correcto
                 Abono::create([
-                    'prestamo_id'  => $this->prestamo->id,
+                    'prestamo_id'  => $prestamoActual->id,
                     'monto_abono'  => $this->monto_abono,
                     'fecha_abono'  => now(),
-                    'numero_cuota' => $this->numero_cuota,
+                    'numero_cuota' => $numeroCuotaParaGuardar,
                 ]);
 
-                // Después de guardar el abono, es CRUCIAL recargar la colección
-                // para que los filtros y la navegación reflejen los cambios
-                // (por ejemplo, si el préstamo pasa a estar "al día" o se finaliza).
+                // Lógica posterior al guardado
                 $this->loadAndFilterLoansCollection();
-
                 session()->flash('success', '¡Abono registrado correctamente!');
+                $this->monto_abono = null;
 
-                $this->monto_abono = null; // Asegúrate de que se restablezca a null
-
-                // Después de guardar y recargar la colección, decidir cómo proceder:
                 if ($this->totalPrestamos > 0) {
-                    // Si todavía hay préstamos, avanzar al siguiente.
-                    // El método next() se encarga de actualizar la posición y llamar a loadByPosition().
                     $this->next();
                 } else {
-                    // Si no quedan préstamos (ej. el último fue pagado),
-                    // llamar a loadByPosition para que resetee los valores y muestre el mensaje adecuado.
                     $this->loadByPosition();
                 }
             });
@@ -619,7 +658,6 @@ class GenerarPago extends Component
             session()->flash('error', 'Hubo un error al registrar el abono.');
         }
 
-        // Cerrar el modal (independientemente de éxito o error)
         $this->confirmandoAbono = false;
     }
 
@@ -669,14 +707,18 @@ class GenerarPago extends Component
             session()->flash('warning', 'Este préstamo no se puede refinanciar en este momento.');
             return;
         }
-        $this->reset(['ref_valor', 'ref_interes', 'ref_comicion', 'ref_descripcion_cliente']);
+        $this->reset(['ref_valor', 'ref_interes', 'ref_comicion', 'ref_numero_cuotas', 'ref_descripcion_cliente']);
+
+        $this->ref_interes = $this->prestamo->interes;
+        $this->ref_numero_cuotas = $this->prestamo->numero_cuotas;
+
         $this->refinanciandoPrestamo = true;
     }
 
     public function cancelarRefinanciamiento()
     {
         $this->refinanciandoPrestamo = false;
-        $this->reset(['ref_valor', 'ref_interes', 'ref_comicion', 'ref_descripcion_cliente']);
+        $this->reset(['ref_valor', 'ref_interes', 'ref_comicion', 'ref_numero_cuotas', 'ref_descripcion_cliente']);
     }
 
     public function guardarRefinanciamiento()
@@ -685,6 +727,7 @@ class GenerarPago extends Component
             'ref_valor'           => 'required|numeric|min:0',
             'ref_interes'         => 'required|numeric|min:0',
             'ref_comicion'        => 'required|numeric|min:0',
+            'ref_numero_cuotas'   => 'required|integer|min:1',
             'ref_descripcion_cliente' => 'nullable|string|max:255',
         ]);
 
@@ -698,6 +741,7 @@ class GenerarPago extends Component
                     'prestamo_id' => $this->prestamo->id,
                     'valor'       => $this->ref_valor,
                     'interes'     => $this->ref_interes,
+                    'numero_cuotas' => $this->ref_numero_cuotas, // <-- GUARDAR
                     'comicion'    => $this->ref_comicion,
                     'estado'      => 'pendiente', // Siempre se crea como pendiente
                     'comicion_borrada' => false,
@@ -743,6 +787,8 @@ class GenerarPago extends Component
     {
         $this->activeLoanListType = null;
         $this->loanList = collect(); // Limpiar la lista al cerrar el modal
+
+        $this->reset(['totalDeudaInicial', 'totalDeudaActual', 'totalValorCuota', 'totalUltimaCuota']);
     }
 
 
@@ -768,6 +814,19 @@ class GenerarPago extends Component
         } else {
             $this->loanList = collect();
         }
+
+        $this->totalDeudaInicial = $this->loanList->sum('deuda_inicial');
+        $this->totalDeudaActual = $this->loanList->sum('deuda_actual');
+        $this->totalValorCuota = $this->loanList->sum('monto_por_cuota');
+
+        if ($type === 'aldia') {
+            $this->totalUltimaCuota = $this->loanList->sum(function ($prestamo) {
+                // Obtenemos el último abono ordenando por fecha de creación descendente
+                $ultimoAbono = $prestamo->abonos->sortByDesc('created_at')->first();
+                // Si existe, retornamos su monto, si no, 0.
+                return $ultimoAbono ? $ultimoAbono->monto_abono : 0;
+            });
+        }
     }
 
     public function selectLoanFromListAndNavigate(int $loanId)
@@ -792,6 +851,11 @@ class GenerarPago extends Component
     }
 
     // --- Métodos para Edición de Cliente ---
+
+    public function toggleInfoDesplegada()
+    {
+        $this->infoDesplegada = !$this->infoDesplegada;
+    }
 
     public function toggleEdicionCliente()
     {

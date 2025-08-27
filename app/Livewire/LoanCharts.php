@@ -17,6 +17,8 @@ class LoanCharts extends Component
     public $anioSeleccionado;
     public $mesSeleccionado;
 
+    public string $nombreMesActual = '';
+
     public array $pieChartData = [
         'labels' => [],
         'data'   => [],
@@ -32,6 +34,12 @@ class LoanCharts extends Component
     public bool $showLoanListModal = false;
     public string $modalTitle = '';
     public \Illuminate\Support\Collection $loanList;
+
+    public ?string $currentListType = null; // Para saber si es 'vencidos' o 'alDia'
+    public float $totalDeudaInicial = 0;
+    public float $totalDeudaActual = 0;
+    public float $totalValorCuota = 0;
+    public float $totalUltimaCuota = 0;
 
     protected $listeners = [
         'updateChartData'     => 'refreshChartData',
@@ -228,6 +236,7 @@ class LoanCharts extends Component
         }
 
         $inicioMes = Carbon::create($this->anioSeleccionado, $this->mesSeleccionado, 1)->startOfDay();
+        $this->nombreMesActual = $inicioMes->translatedFormat('F');
         $finMes    = $inicioMes->copy()->endOfMonth();
         $periodo   = CarbonPeriod::create($inicioMes, $finMes);
 
@@ -332,26 +341,42 @@ class LoanCharts extends Component
             return;
         }
 
-        // Eager load the 'cliente' relationship to avoid N+1 query issues in the view.
-        $baseQuery = Prestamo::whereIn('estado', ['autorizado', 'activo'])->with('cliente');
+        // ===== CORRECCIÓN 1: Asignar el tipo de lista actual =====
+        $this->currentListType = $type;
+
+        // ===== CORRECCIÓN 2: Optimización de consulta (Eager Loading) =====
+        // Eager load de 'cliente' y 'abonos' para evitar N+1 query issues.
+        $baseQuery = Prestamo::whereIn('estado', ['autorizado', 'activo'])->with(['cliente', 'abonos']);
 
         $prestamos = $this->rolSeleccionado === 'Oficina'
             ? $baseQuery->clone()->whereHas('cliente', fn($q) => $q->where('oficina_id', $usuario->id))->get()
             : $baseQuery->clone()->where('agente_asignado', $usuario->id)->get();
 
+        // El resto de tu lógica para filtrar y titular está perfecta
         if ($type === 'vencidos') {
-            // Lógica corregida: préstamos cuya fecha de pago es hoy o anterior.
             $this->loanList = $prestamos->filter(fn($p) => 
                 !$p->next_payment || $p->next_payment->lte(Carbon::today())
             );
             $this->modalTitle = 'Préstamos Vencidos';
         } elseif ($type === 'alDia') {
-            // Lógica corregida: préstamos cuya fecha de pago es posterior a hoy.
             $this->loanList = $prestamos->filter(fn($p) => $p->next_payment && $p->next_payment->gt(Carbon::today()));
             $this->modalTitle = 'Préstamos al Día';
         } else {
             $this->loanList = collect();
             $this->modalTitle = '';
+        }
+
+        // El resto de tu lógica para calcular los totales también está perfecta
+        $this->totalDeudaInicial = $this->loanList->sum('deuda_inicial');
+        $this->totalDeudaActual = $this->loanList->sum('deuda_actual');
+        $this->totalValorCuota = $this->loanList->sum('monto_por_cuota');
+
+        if ($type === 'alDia') {
+            $this->totalUltimaCuota = $this->loanList->sum(function ($prestamo) {
+                // Esta línea ahora es mucho más eficiente gracias al with('abonos')
+                $ultimoAbono = $prestamo->abonos->sortByDesc('created_at')->first();
+                return $ultimoAbono ? $ultimoAbono->monto_abono : 0;
+            });
         }
 
         $this->showLoanListModal = true;
@@ -362,6 +387,9 @@ class LoanCharts extends Component
         $this->showLoanListModal = false;
         $this->loanList = collect();
         $this->modalTitle = '';
+
+        $this->currentListType = null;
+        $this->reset(['totalDeudaInicial', 'totalDeudaActual', 'totalValorCuota', 'totalUltimaCuota']);
     }
 
     public function render()

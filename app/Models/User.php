@@ -90,6 +90,10 @@ class User extends Authenticatable implements FilamentUser
         return $this->hasMany(HistorialMovimiento::class);
     }
 
+    public function registroLiquidaciones(): HasMany
+    {
+        return $this->hasMany(RegistroLiquidacion::class, 'user_id');
+    }
 
     protected static function booted()
     {
@@ -99,7 +103,34 @@ class User extends Authenticatable implements FilamentUser
                 $user->dineroBase()->create([
                     'monto' => 0,
                     'monto_general' => 0,
+                    'dinero_en_mano' => 0,
+                    'monto_inicial' => 0,
+                    
                 ]);
+            }
+        });
+
+            static::deleted(function ($user) {
+            // Si el usuario se está eliminando permanentemente
+            if ($user->isForceDeleting()) {
+                // Elimina permanentemente el registro de dineroBase asociado
+                $user->dineroBase()->forceDelete();
+            } else {
+                // Si es un soft delete, también hacemos soft delete al dineroBase
+                if ($user->dineroBase) {
+                    $user->dineroBase->delete();
+                }
+            }
+        });
+
+        // Se dispara cuando un usuario soft-deleted es restaurado
+        static::restored(function ($user) {
+            // Busca el dineroBase asociado, incluyendo los que están en la papelera
+            $dineroBase = $user->dineroBase()->withTrashed()->first();
+
+            // Si se encuentra y está en la papelera, lo restaura
+            if ($dineroBase && $dineroBase->trashed()) {
+                $dineroBase->restore();
             }
         });
     }

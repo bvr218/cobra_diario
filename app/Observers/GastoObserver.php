@@ -7,9 +7,13 @@ use App\Models\Gasto;
 use App\Models\User;
 use App\Models\HistorialMovimiento;
 use Illuminate\Support\Facades\DB;
+use App\Traits\ManagesUserBalance;
 
 class GastoObserver
 {
+
+    use ManagesUserBalance;
+
     public function created(Gasto $gasto): void
     {
         if ($gasto->autorizado) {
@@ -56,48 +60,40 @@ class GastoObserver
     {
         if ($monto === 0.0) return;
 
-        $tipoMovimiento = 'creación';
-        if ($esEdicion) {
-            $tipoMovimiento = 'edición';
-        } elseif ($esEliminacion) {
-            $tipoMovimiento = 'eliminación';
-            $monto = -$monto; // Invertir el monto para la eliminación (reembolso)
-        }
+        DB::transaction(function () use ($gasto, $monto, $descripcion, $esEdicion, $esEliminacion) {
+            $userId = $gasto->user_id;
+            $historialMonto = 0;
+            $tipoMovimiento = 'creación';
 
-        DB::transaction(function () use ($gasto, $monto, $descripcion, $esEdicion, $tipoMovimiento) {
-            // Usamos firstOrCreate para evitar race conditions al crear el registro de dinero base.
-            // Esto soluciona el error de "Duplicate entry" que puede ocurrir bajo alta concurrencia.
-            $dineroBase = DineroBase::firstOrCreate(
-                ['user_id' => $gasto->user_id],
-                ['monto' => 0, 'monto_general' => 0] // Asegúrate de inicializar monto_general también si es nuevo
-            );
-
-            // Ajuste para la columna 'monto'
-            if ($monto > 0) {
-                $dineroBase->decrement('monto', $monto);
+            if ($esEliminacion) {
+                // Se elimina un gasto, el dinero se devuelve (crédito)
+                $this->creditToUserBalance($userId, $monto);
+                DineroBase::where('user_id', $userId)->increment('monto_general', $monto);
+                $historialMonto = $monto;
+                $tipoMovimiento = 'eliminación';
             } else {
-                $dineroBase->increment('monto', abs($monto));
+                // Se crea o actualiza un gasto.
+                $tipoMovimiento = $esEdicion ? 'edición' : 'creación';
+                
+                if ($monto > 0) { // Es un débito (gasto nuevo, o aumento de valor)
+                    $this->debitFromUserBalance($userId, $monto);
+                    DineroBase::where('user_id', $userId)->decrement('monto_general', $monto);
+                } else { // Es un crédito (gasto desautorizado, o disminución de valor)
+                    $this->creditToUserBalance($userId, abs($monto));
+                    DineroBase::where('user_id', $userId)->increment('monto_general', abs($monto));
+                }
+                $historialMonto = -$monto; // En el historial, una salida es negativa
             }
-
-            // --- NUEVA LÓGICA PARA monto_general ---
-            if ($monto > 0) {
-                $dineroBase->decrement('monto_general', $monto);
-            } else {
-                $dineroBase->increment('monto_general', abs($monto));
-            }
-            // --- FIN NUEVA LÓGICA ---
 
             HistorialMovimiento::create([
-                'user_id'       => $dineroBase->user_id,
-                'tipo'          => $tipoMovimiento, // Variable ahora disponible en el closure
+                'user_id'       => $userId,
+                'tipo'          => $tipoMovimiento,
                 'descripcion'   => $descripcion,
-                'monto'         => $monto, // Este monto es el del movimiento, no el saldo final
+                'monto'         => $historialMonto,
                 'fecha'         => now(),
                 'es_edicion'    => $esEdicion,
                 'referencia_id' => $gasto->id,
                 'tabla_origen'  => 'gastos',
-                'cambio_desde'  => null,
-                'cambio_hacia'  => null,
             ]);
         });
     }

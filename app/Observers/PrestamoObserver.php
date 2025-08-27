@@ -8,10 +8,13 @@ use App\Models\User;
 use App\Models\HistorialMovimiento;
 use Illuminate\Support\Facades\DB;
 use App\Notifications\NuevaNotificacion;
+use App\Traits\ManagesUserBalance;
 use Illuminate\Support\Facades\Log; // Importa la fachada Log para debugging
 
 class PrestamoObserver
 {
+    use ManagesUserBalance;
+
     public function created(Prestamo $prestamo): void
     {
         $prestamo->estado = $prestamo->estado ?? 'pendiente';
@@ -60,6 +63,38 @@ class PrestamoObserver
     {
         $originalEstado = $prestamo->getOriginal('estado');
         $nuevoEstado    = $prestamo->estado;
+
+        if ($originalEstado === 'pendiente' && $nuevoEstado !== 'pendiente' && is_null($prestamo->authorized_at)) {
+            $prestamo->authorized_at = now();
+        }
+
+        if ($prestamo->isDirty('estado')) {
+
+            // CASO 1: El préstamo se mueve HACIA el estado 'desactivado'
+            if ($nuevoEstado === 'desactivado' && $originalEstado !== 'desactivado') {
+                $deudaActual = $prestamo->deuda_actual;
+                if ($deudaActual > 0) {
+                    $usuarioRegistrado = User::find($prestamo->registrado_id);
+                    if ($usuarioRegistrado && $usuarioRegistrado->dineroBase) {
+                        // Restamos la deuda actual del monto general del usuario que registró el préstamo
+                        $usuarioRegistrado->dineroBase()->decrement('monto_general', $deudaActual);
+                    }
+                }
+            }
+
+            // CASO 2: El préstamo SALE del estado 'desactivado' a otro estado
+            if ($originalEstado === 'desactivado' && $nuevoEstado !== 'desactivado') {
+                $deudaActual = $prestamo->deuda_actual;
+                if ($deudaActual > 0) {
+                    $usuarioRegistrado = User::find($prestamo->registrado_id);
+                    if ($usuarioRegistrado && $usuarioRegistrado->dineroBase) {
+                        // Volvemos a sumar la deuda actual al monto general
+                        $usuarioRegistrado->dineroBase()->increment('monto_general', $deudaActual);
+                    }
+                }
+            }
+        }
+
         $changes        = $prestamo->getChanges();
         unset($changes['updated_at']);
 
@@ -238,43 +273,49 @@ class PrestamoObserver
 
     protected function restarMonto(Prestamo $prestamo, float $monto, string $descripcion, bool $esEdicion = false): void
     {
-        if ($monto === 0) {
+        if ($monto === 0.0) {
             return;
         }
 
-        DB::transaction(function () use ($prestamo, $monto, $descripcion, $esEdicion) {
-            $usuario = User::find($prestamo->registrado_id);
-            if (! $usuario || ! $usuario->dineroBase) {
-                Log::warning("PrestamoObserver@restarMonto: No se pudo encontrar usuario o dineroBase para préstamo {$prestamo->id} al restar monto. Usuario ID: " . ($prestamo->registrado_id ?? 'N/A'));
-                return;
-            }
+        $usuario = User::find($prestamo->registrado_id);
+        if (!$usuario) {
+            Log::warning("PrestamoObserver@restarMonto: No se pudo encontrar usuario para préstamo {$prestamo->id}. Usuario ID: " . ($prestamo->registrado_id ?? 'N/A'));
+            return;
+        }
 
-            // **IMPORTANTE:** Cambiamos para usar la carga del modelo y save() para asegurar el disparo del Observer de DineroBase
-            $dineroBase = $usuario->dineroBase;
-            if ($monto > 0) {
-                $dineroBase->monto -= $monto; // Restar
-            } else {
-                $dineroBase->monto += abs($monto); // Sumar si $monto es negativo
-            }
-            $dineroBase->save();
+        // Utilizar los nuevos métodos del Trait para manejar la lógica de débito/crédito
+        if ($monto > 0) {
+            // Un monto positivo significa un débito (salida de dinero por un nuevo préstamo).
+            $this->debitFromUserBalance($usuario->id, $monto);
+        } else {
+            // Un monto negativo significa un crédito (reversión o devolución de dinero).
+            $this->creditToUserBalance($usuario->id, abs($monto));
+        }
 
-            HistorialMovimiento::create([
-                'user_id'       => $usuario->id,
-                'tipo'          => 'ajuste_dinero_base',
-                'descripcion'   => $descripcion,
-                'monto'         => -$monto, // Muestra el efecto en la caja (negativo para salidas)
-                'fecha'         => now(),
-                'es_edicion'    => $esEdicion,
-                'cambio_desde'  => json_encode([
-                    'cliente_id' => $prestamo->cliente_id,
-                    'id' => $prestamo->id,
-                    'monto_antes' => $usuario->dineroBase->getOriginal('monto') // Se requiere un fresh() si el DineroBase se modificó justo antes
-                ]),
-                'cambio_hacia'  => json_encode(['monto_despues' => $usuario->dineroBase->monto]),
-                'referencia_id' => $prestamo->id,
-                'tabla_origen'  => 'prestamos',
-            ]);
-        });
+        // Buscamos el estado final de los balances para registrarlo en el historial.
+        // El método first() es seguro aquí porque el Trait ya se encargó de crear el registro si no existía.
+        $dineroBaseActual = DineroBase::where('user_id', $usuario->id)->first();
+        
+        // Registrar el movimiento en el historial para trazabilidad.
+        HistorialMovimiento::create([
+            'user_id'       => $usuario->id,
+            'tipo'          => 'ajuste_dinero_base',
+            'descripcion'   => $descripcion,
+            'monto'         => -$monto, // El monto del historial refleja la salida (negativo) o entrada (positivo).
+            'fecha'         => now(),
+            'es_edicion'    => $esEdicion,
+            'cambio_desde'  => json_encode([
+                'cliente_id' => $prestamo->cliente_id,
+                'prestamo_id' => $prestamo->id,
+            ]),
+            // Se registra el estado final de ambos balances para una mejor auditoría.
+            'cambio_hacia'  => json_encode([
+                'monto_mano_despues' => $dineroBaseActual->monto, 
+                'monto_caja_despues' => $dineroBaseActual->dinero_en_mano
+            ]),
+            'referencia_id' => $prestamo->id,
+            'tabla_origen'  => 'prestamos',
+        ]);
     }
 
     protected function registrarMovimiento(

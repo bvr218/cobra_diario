@@ -1,0 +1,205 @@
+/*
+|--------------------------------------------------------------------------
+| Estilos Aislados para la Vista de Liquidación Guardada
+|--------------------------------------------------------------------------
+|
+| Este archivo contiene todas las clases necesarias para renderizar la
+| página de visualización de una liquidación guardada.
+|
+*/
+
+/* Contenedor principal de toda la vista */
+.liquidation-view__container {
+    padding: 1rem; /* p-4 */
+}
+
+@media (min-width: 640px) {
+    .liquidation-view__container {
+        padding: 1.5rem; /* sm:p-6 */
+    }
+}
+
+/* --- Estilos del Encabezado --- */
+
+/* Mantenemos el fondo azul claro que te gustó */
+.liquidation-header {
+    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+    border-radius: 0.75rem;
+    background-image: linear-gradient(145deg, #e0f2fe, #f0f9ff);
+    border: 1px solid #bae6fd;
+    box-shadow: 0 4px 10px -2px rgba(14, 165, 233, 0.1), 0 2px 6px -3px rgba(14, 165, 233, 0.1);
+    transition: all 0.2s ease-in-out;
+}
+
+/* CAMBIO: Los colores del texto del header vuelven a ser los oscuros originales */
+.liquidation-header__title {
+    color: var(--text-light); /* Vuelve al color de texto principal */
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 700;
+}
+.liquidation-header__subtitle {
+    color: #4b5563; /* Vuelve al gris-600 original */
+    font-size: 1rem;
+    line-height: 1.5rem;
+    margin-top: 0.25rem;
+}
+.liquidation-header__user {
+    font-weight: 600;
+}
+.liquidation-header__role {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+}
+.liquidation-header__period {
+    color: #6b7280; /* Vuelve al gris-500 original */
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    margin-top: 0.5rem;
+}
+.liquidation-header__timestamp {
+    color: #9ca3af; /* Vuelve al gris-400 original */
+    font-size: 0.75rem;
+    line-height: 1rem;
+    margin-top: 0.25rem;
+}
+
+/* --- Estilos del Contenedor de Datos --- */
+
+.data-container {
+    background-color: var(--bg-light);
+    border: 1px solid var(--border-light);
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px var(--shadow-color-light);
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.info-flex-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+@media(max-width: 640px) {
+    .info-flex-container {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+}
+
+.info-item-container {
+    background-color: var(--bg-light);
+    border: 1px solid var(--border-light);
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    text-align: center;
+    box-shadow: 0 1px 2px var(--shadow-color-light);
+    transition: transform 0.2s, box-shadow 0.2s;
+    overflow-wrap: break-word;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.info-item-container.cursor-pointer:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px var(--shadow-color-light);
+}
+
+.info-item__title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--text-light);
+}
+
+/* NUEVO: Color específico para los números de los cuadros */
+.info-item__value {
+    font-size: 1rem;
+    font-weight: bold;
+    line-height: 1.2;
+    color: #1e40af; /* Azul oscuro (blue-800) para los números */
+}
+
+/* Estos colores (verde/fucsia) sobreescribirán el azul cuando sea necesario */
+.info-item__value--positive {
+    color: var(--secondary-color);
+}
+
+.info-item__value--negative {
+    color: var(--accent-color);
+}
+
+/* --- Estilos para Mensaje de 'No Encontrado' --- */
+
+.liquidation-not-found {
+    padding: 1.5rem;
+    text-align: center;
+    color: #6b7280;
+}
+.liquidation-not-found__title {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    font-weight: 600;
+}
+.liquidation-not-found__text {
+    margin-top: 0.5rem;
+}
+
+
+/* ==========================================================================
+   Modo Oscuro (Dark Mode)
+   ========================================================================== */
+
+/* Mantenemos el fondo azul oscuro */
+.dark .liquidation-header {
+    background-image: linear-gradient(145deg, #0f172a, #1e293b);
+    border-color: #38bdf8;
+    box-shadow: 0 4px 10px -2px rgba(56, 189, 248, 0.1), 0 2px 6px -3px rgba(56, 189, 248, 0.1);
+}
+
+/* CAMBIO: Los colores del texto del header vuelven a ser los claros originales */
+.dark .liquidation-header__title {
+    color: var(--text-dark);
+}
+.dark .liquidation-header__subtitle {
+    color: #d1d5db; /* Vuelve al gris-300 original */
+}
+.dark .liquidation-header__period {
+    color: #9ca3af; /* Vuelve al gris-400 original */
+}
+.dark .liquidation-header__timestamp {
+    color: #6b7280; /* Vuelve al gris-500 original */
+}
+
+.dark .data-container {
+    background-color: var(--bg-dark);
+    border-color: var(--border-dark);
+    box-shadow: 0 4px 6px var(--shadow-color-dark);
+}
+
+.dark .info-item-container {
+    background-color: var(--bg-dark);
+    border-color: var(--border-dark);
+    box-shadow: 0 1px 2px var(--shadow-color-dark);
+}
+
+.dark .info-item__title {
+    color: var(--text-dark);
+}
+
+/* NUEVO: Color para los números en modo oscuro */
+.dark .info-item__value {
+    color: #60a5fa; /* Un azul más claro y brillante (blue-400) */
+}
+
+.dark .liquidation-not-found {
+    color: #9ca3af;
+}

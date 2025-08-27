@@ -5,6 +5,8 @@ namespace App\Livewire\Filament;
 use Livewire\Component;
 use App\Models\Prestamo;
 
+//app/livewire/filament/RutaClientes.php
+
 class RutaClientes extends Component
 {
     public $prestamos = [];
@@ -54,8 +56,9 @@ class RutaClientes extends Component
 
     private function cargarPrestamos()
     {
-        $this->prestamos = Prestamo::where('agente_asignado', auth()->user()->id)
-                                   ->whereIn('estado', ['activo', 'autorizado']) // <-- AÑADIDO: Filtrar por estado
+        $this->prestamos = Prestamo::with(['cliente', 'frecuencia']) 
+                                   ->where('agente_asignado', auth()->user()->id)
+                                   ->whereIn('estado', ['activo', 'autorizado'])
                                    ->orderBy('posicion_ruta')
                                    ->get();
     }

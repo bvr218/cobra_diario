@@ -10,13 +10,11 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use App\Services\StatsService;
 use App\Filament\Actions\DeleteCommissionsAction;
-use App\Filament\Actions\AdjustDineroBaseAction;
 use Illuminate\Support\Carbon;
-use App\Models\DineroBase; // Asegúrate de importar DineroBase
 use Spatie\Permission\Models\Role;
-use Livewire\Attributes\On; 
+use Livewire\Attributes\On;
+use App\Services\LiquidationDataCollectionService;
 
-// Importar los Traits
 use App\Filament\Pages\Concerns\ManagesUsers;
 use App\Filament\Pages\Concerns\HandlesStatsCalculations;
 use App\Filament\Pages\Concerns\ManagesModals;
@@ -25,13 +23,12 @@ class RegistroAbonos extends Component implements HasForms
 {
     use InteractsWithForms, ManagesUsers, HandlesStatsCalculations, ManagesModals;
 
-    // PROPIEDADES PÚBLICAS ESPECÍFICAS DE ESTE COMPONENTE
+    // --- PROPIEDADES MODIFICADAS ---
+    // Se eliminaron 'showTransferenciaDineroEnManoModal' y 'montoTransferenciaDineroEnMano'
     public bool $showGuardarLiquidacionModal = false;
     public ?string $liquidacionNombre = null;
     public ?int $usuarioId = null;
-    public bool $showTransferenciaDineroEnManoModal = false;
-    public ?float $montoTransferenciaDineroEnMano = null;
-    public bool $lockDateFilter = false; // Flag para bloquear selector de fechas
+    public bool $lockDateFilter = false; 
 
     public ?User $usuarioSeleccionado = null;
 
@@ -58,16 +55,12 @@ class RegistroAbonos extends Component implements HasForms
 
         $this->initializeManagesUsers();
         
-        // La lógica de fechas ahora está centralizada en este método, que respeta el permiso 'registro.view'.
         $this->initializeDatesBasedOnFilter();
 
-        // Si tiene permiso registro.view, solo necesitamos bloquear el selector.
-        // Las fechas ya se establecieron correctamente en el método de arriba.
         if (auth()->user()?->can('registro.view')) {
             $this->lockDateFilter = true;
         }
 
-        // Resto de tu lógica de mount sin cambios…
         if ($this->usuarioId) {
             $user = User::find($this->usuarioId);
             if ($user) {
@@ -81,7 +74,6 @@ class RegistroAbonos extends Component implements HasForms
             $this->refreshUsuarios();
         }
 
-        // Se llama una sola vez al final para calcular las estadísticas con los datos iniciales.
         $this->computeStats();
     }
 
@@ -90,7 +82,6 @@ class RegistroAbonos extends Component implements HasForms
 
     public function deleteComisiones(): void
     {
-        // Asegúrate de que un usuario esté seleccionado antes de intentar borrar
         if (! $this->usuarioSeleccionado) {
             Notification::make()
                 ->title('Error')
@@ -110,7 +101,7 @@ class RegistroAbonos extends Component implements HasForms
                     ->label('Sí, Eliminar')
                     ->color('danger')
                     ->button()
-                    ->dispatch('confirmDeleteCommissions', [ // Este dispatch es clave
+                    ->dispatch('confirmDeleteCommissions', [ 
                         'usuarioId' => $this->usuarioSeleccionado->id, 
                         'filtrarPorFecha' => $this->filtrarPorFecha,
                         'fechaInicio' => $this->fechaInicio,
@@ -126,7 +117,7 @@ class RegistroAbonos extends Component implements HasForms
             ->send();
     }
 
-    #[On('confirmDeleteCommissions')] // Este atributo de Livewire 3.x escucha el evento
+    #[On('confirmDeleteCommissions')] 
     public function confirmDeleteCommissions(
         int $usuarioId,
         bool $filtrarPorFecha,
@@ -134,7 +125,6 @@ class RegistroAbonos extends Component implements HasForms
         ?string $fechaFin
     ): void
     {
-        // Los parámetros ahora se reciben individualmente
         $usuarioSeleccionado = User::find($usuarioId);
 
         if (! $usuarioSeleccionado) {
@@ -146,7 +136,6 @@ class RegistroAbonos extends Component implements HasForms
             return;
         }
 
-        // Ejecutar la acción de eliminación de comisiones
         app(DeleteCommissionsAction::class)->execute(
             $usuarioSeleccionado,
             $filtrarPorFecha,
@@ -154,7 +143,6 @@ class RegistroAbonos extends Component implements HasForms
             $fechaFin
         );
         
-        // Vuelve a calcular las estadísticas después de la eliminación.
         $this->computeStats(); 
     }
 
@@ -186,87 +174,45 @@ class RegistroAbonos extends Component implements HasForms
             return;
         }
 
+        // Recolectamos las estadísticas actuales
+        $statsActuales = [
+            'dineroInicial' => $this->dineroInicial,
+            'dineroCapital' => $this->dineroCapital,
+            'dineroEnMano' => $this->dineroEnMano,
+            'prestamosEntregados' => $this->prestamosEntregados,
+            'prestamosPendientes' => $this->prestamosPendientes,
+            'totalPrestado' => $this->totalPrestado,
+            'totalPrestadoConInteres' => $this->totalPrestadoConInteres,
+            'cantidadRefinanciaciones' => $this->cantidadRefinanciaciones,
+            'cantidadRefinanciacionesPendientes' => $this->cantidadRefinanciacionesPendientes,
+            'deudaRefinanciadaTotal' => $this->deudaRefinanciadaTotal,
+            'montoRefinanciaciones' => $this->montoRefinanciaciones,
+            'totalComision' => $this->totalComision,
+            'prestamosFinalizadosCount' => $this->prestamosFinalizadosCount,
+            'cantidadRecaudosRealizados' => $this->cantidadRecaudosRealizados,
+            'totalPrestamosAsignados' => $this->totalPrestamosAsignados,
+            'dineroRecaudado' => $this->dineroRecaudado,
+            'gastosAutorizados' => $this->gastosAutorizados,
+            'gastosNoAutorizados' => $this->gastosNoAutorizados,
+            'dineroEnCaja' => $this->dineroEnCaja,
+        ];
+
+        $liquidationCollectionService = app(LiquidationDataCollectionService::class);
+        $listasParaGuardar = $liquidationCollectionService->getDetailedLists(
+            $this->usuarioSeleccionado,
+            Carbon::parse($this->fechaInicio),
+            Carbon::parse($this->fechaFin)
+        );
+
         $this->dispatch('openGuardarLiquidacionModal',
-            usuarioId: $this->usuarioSeleccionado->id,
+            usuario: $this->usuarioSeleccionado,
             fechaInicio: $this->fechaInicio,
-            fechaFin: $this->fechaFin
+            fechaFin: $this->fechaFin,
+            rolSeleccionado: $this->rolSeleccionado,
+            stats: $statsActuales,
+            listas: $listasParaGuardar,
+            type: 'diario',
         )->to('guardar-liquidacion-modal');
-    }
-
-    // Abre el modal para la transferencia
-    public function openTransferenciaDineroEnManoModal(): void
-    {
-        if (!$this->usuarioSeleccionado) {
-            Notification::make()->title('Error')->body('Seleccione un usuario primero.')->danger()->send();
-            return;
-        }
-        $this->montoTransferenciaDineroEnMano = null; // Limpiar valor anterior
-        $this->resetErrorBag('montoTransferenciaDineroEnMano'); // Limpiar errores anteriores
-        $this->showTransferenciaDineroEnManoModal = true;
-    }
-
-    // Cierra el modal de transferencia
-    public function closeTransferenciaDineroEnManoModal(): void
-    {
-        $this->showTransferenciaDineroEnManoModal = false;
-        $this->montoTransferenciaDineroEnMano = null;
-        $this->resetErrorBag('montoTransferenciaDineroEnMano');
-    }
-
-    public function realizarTransferenciaDineroEnMano(): void
-    {
-        if (!$this->usuarioSeleccionado) {
-            Notification::make()->title('Error')->body('No hay usuario seleccionado.')->danger()->send();
-            return;
-        }
-
-        $this->validate([
-            'montoTransferenciaDineroEnMano' => 'required|numeric|not_in:0',
-        ]);
-
-        $dineroBase = DineroBase::where('user_id', $this->usuarioSeleccionado->id)->first();
-
-        if (!$dineroBase) {
-            // Crear si no existe, aunque debería existir si el usuario tiene estadísticas
-            $dineroBase = DineroBase::create([
-                'user_id' => $this->usuarioSeleccionado->id,
-                'monto' => 0,
-                'dinero_en_mano' => 0,
-                'monto_general' => 0, // Asegúrate de que estos tengan un valor por defecto si es necesario
-                'monto_inicial' => 0,
-            ]);
-        }
-
-        $transferAmount = (float) $this->montoTransferenciaDineroEnMano;
-
-        // Lógica de transferencia:
-        // Si $transferAmount es positivo, sale de 'monto' (caja) y va a 'dinero_en_mano'.
-        // Si $transferAmount es negativo, sale de 'dinero_en_mano' y va a 'monto' (caja).
-        $dineroBase->monto -= $transferAmount;
-        $dineroBase->dinero_en_mano += $transferAmount;
-
-        try {
-            // Guardar solo los campos modificados para esta operación específica
-            $dineroBase->save(['monto', 'dinero_en_mano']); // Esto disparará el DineroBaseObserver
-
-            Notification::make()
-                ->title('Transferencia Realizada')
-                ->body('La transferencia entre Dinero en Caja y Dinero en Mano se completó.')
-                ->success()
-                ->send();
-
-            // Cerrar el modal y limpiar después de una transferencia exitosa
-            $this->closeTransferenciaDineroEnManoModal();
-            $this->computeStats(); // Actualizar las estadísticas en la vista
-
-        } catch (\Exception $e) {
-            Notification::make()
-                ->title('Error en la Transferencia')
-                ->body('Ocurrió un error: ' . $e->getMessage())
-                ->danger()
-                ->send();
-            \Log::error("Error en transferencia dinero en mano para usuario {$this->usuarioSeleccionado->id}: {$e->getMessage()}");
-        }
     }
 
     public function render()

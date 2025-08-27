@@ -1,0 +1,77 @@
+<?php
+
+// --- CONFIGURACIÓN ---
+// Aquí debes cambiar los valores para que coincidan con tu entorno.
+
+// 1. Credenciales de la Base de Datos
+$db_host = 'localhost'; // Generalmente es 'localhost' o '127.0.0.1'
+$db_name = 'cobra_diario'; // El nombre de tu base de datos (ya estaba bien, pero lo dejo aquí)
+$db_user = 'cambiar_usuario_db'; // Tu usuario de la base de datos (ej. 'root')
+$db_pass = 'cambiar_contraseña_db'; // La contraseña para ese usuario
+
+// 2. Rutas y Directorios
+// ¡IMPORTANTE! Asegúrate de que esta sea la ruta absoluta correcta a tu proyecto.
+$baseDir = '/var/www/cobra_diario';
+
+// 3. Configuración Regional
+// Establece la zona horaria de tu servidor para que las fechas sean correctas.
+date_default_timezone_set('America/Bogota'); // Ejemplo: 'UTC', 'America/Mexico_City', etc.
+// Establece el idioma para los nombres de los meses.
+setlocale(LC_TIME, 'es_ES.UTF-8');
+
+// --- FIN DE LA CONFIGURACIÓN ---
+
+
+// --- LÓGICA DEL SCRIPT (No es necesario editar abajo de esta línea) ---
+
+$baseBackupDir = $baseDir . '/copias-db';
+$logFile = $baseDir . '/copia_error.log';
+
+// Creación de Directorios
+$monthName = strftime('%B');
+$year = date('Y');
+if (empty($monthName)) { $monthName = date('F'); } // Respaldo en inglés si el español falla
+
+$monthlyDir = $baseBackupDir . '/' . ucfirst($monthName) . ' ' . $year;
+
+if (!is_dir($monthlyDir)) {
+    if (!@mkdir($monthlyDir, 0775, true) && !is_dir($monthlyDir)) {
+        file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: No se pudo crear el directorio: " . $monthlyDir . "\n", FILE_APPEND);
+        exit;
+    }
+}
+
+// Definición de Nombres de Archivo
+$date = date('Y-m-d-H-i-s');
+$tempSqlFile = $monthlyDir . '/copia_' . $date . '.sql';
+$finalZipFile = $monthlyDir . '/copia_' . $date . '.sql.zip';
+
+// PASO 1: Crear el archivo .sql sin comprimir.
+$command_dump = sprintf(
+    "mysqldump -h %s -u %s -p%s %s > %s",
+    escapeshellarg($db_host),
+    escapeshellarg($db_user),
+    escapeshellarg($db_pass),
+    escapeshellarg($db_name),
+    escapeshellarg($tempSqlFile)
+);
+
+exec($command_dump, $output, $return_var);
+
+if ($return_var !== 0) {
+    file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: mysqldump falló. Verifica las credenciales y permisos. No se creó el archivo temporal.\n", FILE_APPEND);
+    exit;
+}
+
+// PASO 2: Comprimir el archivo .sql existente usando zip.
+$command_zip = "zip -j " . escapeshellarg($finalZipFile) . " " . escapeshellarg($tempSqlFile);
+exec($command_zip, $output_zip, $return_var_zip);
+
+if ($return_var_zip !== 0) {
+    file_put_contents($logFile, date('Y-m-d H:i:s') . " - ERROR: El comando zip falló.\n", FILE_APPEND);
+} else {
+    // PASO 3 (Limpieza): Si la compresión fue exitosa, eliminamos el archivo .sql temporal.
+    unlink($tempSqlFile);
+}
+
+?>

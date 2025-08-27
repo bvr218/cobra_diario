@@ -39,7 +39,7 @@ class CheckSystemClosed
         if (
             ($hoy->cerrado_manual || $fueraDeHorario)
             && Auth::check()
-            && ! Auth::user()->hasRole('admin')
+            && ! Auth::user()->can('controlSesion.ignore')
         ) {
             Auth::logout();
 

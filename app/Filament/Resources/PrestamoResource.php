@@ -30,6 +30,8 @@ use Carbon\Carbon;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+// Asegúrate de importar TrashedFilter
+use Filament\Tables\Filters\TrashedFilter;
 
 class PrestamoResource extends Resource
 {
@@ -60,6 +62,12 @@ class PrestamoResource extends Resource
                     ->content(fn (?Prestamo $record) =>
                         $record ? '$' . number_format($record->monto_por_cuota, 0) . ' COP' : 'N/A'
                     ),
+
+                // Placeholder::make('interes_efectivo')
+                //     ->label('Tasa de Interés Efectiva')
+                //     ->content(fn (?Prestamo $record): string => $record ? $record->interes . '%' : 'N/A')
+                //     ->visible(fn (?Prestamo $record): bool => $record && $record->refinanciamientos()->where('estado', 'autorizado')->exists())
+                //     ->helperText('Este es el interés de la última refinanciación autorizada.'),
 
                 Select::make('cliente_id')
                     ->label('Cliente')
@@ -135,6 +143,8 @@ class PrestamoResource extends Resource
                         'negado'     => 'Negado',
                         'activo'     => 'Activo',
                         'finalizado' => 'Finalizado',
+                        'desactivado' => 'Desactivado',
+                        
                     ])
                     ->disabled(fn () => ! $user->can('prestamos.index'))
                     ->visible(fn () => $user->can('prestamos.index'))
@@ -146,19 +156,43 @@ class PrestamoResource extends Resource
                     ->label('Fecha de primer pago'),
 
                 TextInput::make('valor_total_prestamo')
-                    ->label('Valor del Préstamo')
+                    ->label(fn (?Prestamo $record): string =>
+                        ($record && $record->refinanciamientos()->where('estado', 'autorizado')->exists())
+                        ? 'Valor Original del Préstamo'
+                        : 'Valor del Préstamo'
+                    )
                     ->numeric()
                     ->required()
                     ->prefix('COP')
-                    ->minValue(0),
+                    ->minValue(0)
+                    // Se deshabilita si ya tiene una refinanciación autorizada
+                    ->disabled(fn (?Prestamo $record): bool =>
+                        $record && $record->refinanciamientos()->where('estado', 'autorizado')->exists()
+                    )
+                    ->helperText(fn (?Prestamo $record): ?string =>
+                        ($record && $record->refinanciamientos()->where('estado', 'autorizado')->exists())
+                        ? 'El valor original no se puede editar después de una refinanciación.'
+                        : null
+                    ),
 
                 TextInput::make('interes')
-                    ->label('Tasa de Interés (%)')
+                    // Cambiamos la etiqueta para que sea más claro
+                    ->label('Interes')
                     ->numeric()
                     ->required()
                     ->minValue(0)
                     ->maxValue(100)
-                    ->suffix('%'),
+                    ->suffix('%')
+                    // La clave: Deshabilitar el campo si el préstamo existe y tiene refinanciaciones autorizadas
+                    ->disabled(fn (?Prestamo $record): bool =>
+                        $record && $record->refinanciamientos()->where('estado', 'autorizado')->exists()
+                    )
+                    // Ayuda visual para el usuario
+                    ->helperText(fn (?Prestamo $record): ?string =>
+                        ($record && $record->refinanciamientos()->where('estado', 'autorizado')->exists())
+                        ? 'El interés original no se puede editar después de una refinanciación.'
+                        : null
+                    ),
 
                 TextInput::make('numero_cuotas')
                     ->label('Número de Cuotas')
@@ -350,7 +384,7 @@ class PrestamoResource extends Resource
                     ->placeholder('Sin Agente Asignado')
                     ->searchable()
                     ->disabled(fn (Prestamo $record) =>
-                        $record->estado === 'finalizado' ||
+                        in_array($record->estado, ['finalizado', 'desactivado']) ||
                         !(
                             Auth::user()->can('prestamos.edit') ||
                             (!Auth::user()->can('prestamos.edit') && Auth::user()->can('activarPrestamosOficina.view'))
@@ -365,6 +399,7 @@ class PrestamoResource extends Resource
                         'negado'     => 'Negado',
                         'activo'     => 'Activo',
                         'finalizado' => 'Finalizado',
+                        'desactivado' => 'Desactivado',
                     ])
                     ->default('pendiente')
                     ->searchable()
@@ -400,6 +435,7 @@ class PrestamoResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
+                // TrashedFilter::make(),
                 Tables\Filters\Filter::make('cedula_o_celular_cliente')
                     ->form([
                         Forms\Components\TextInput::make('busqueda')
@@ -428,6 +464,7 @@ class PrestamoResource extends Resource
                         'negado'     => 'Negado',
                         'activo'     => 'Activo',
                         'finalizado' => 'Finalizado',
+                        'desactivado' => 'Desactivado',
                     ]),
 
                 SelectFilter::make('agente_asignado')
@@ -558,12 +595,13 @@ class PrestamoResource extends Resource
                         return User::whereHas('prestamosRegistrados')->pluck('name', 'id')->toArray();
                     })
                     ->placeholder('Todos los registradores')
-                    ->searchable()
                     ->visible(fn () => Auth::user()->can('prestamos.index') || Auth::user()->can('prestamosOficina.index')),
             ])
             ->paginationPageOptions([10, 25, 50, 100, 500])
             ->defaultPaginationPageOption(25)
             ->actions([
+                Tables\Actions\EditAction::make()
+                    ->visible(fn (Prestamo $record) => $record->estado !== 'desactivado'),
                 // Botón “Activar Préstamo”
                 Tables\Actions\Action::make('activar_prestamo')
                     ->label('Activar Préstamo')
@@ -571,7 +609,8 @@ class PrestamoResource extends Resource
                     ->color('success')
                     ->visible(fn (Prestamo $record) =>
                         ($user->can('prestamos.view') || $user->can('activarPrestamosOficina.view')) &&
-                        $record->estado === 'autorizado'
+                        $record->estado === 'autorizado' && 
+                        $record->estado !== 'desactivado'
                     )
                     ->requiresConfirmation()
                     ->action(fn (Prestamo $record) => $record->update(['estado' => 'activo'])),
@@ -602,6 +641,12 @@ class PrestamoResource extends Resource
                                 ->required()
                                 ->minValue(0)
                                 ->prefix('%'),
+
+                            TextInput::make('numero_cuotas')
+                                ->label('Numero de Cuotas')
+                                ->numeric()
+                                ->required()
+                                ->prefix('#'),
 
                             TextInput::make('comicion')
                                 ->label('Valor de seguro a cobrar')
@@ -634,6 +679,7 @@ class PrestamoResource extends Resource
                                 'prestamo_id' => $record->id,
                                 'valor'       => $data['valor'],
                                 'interes'     => $data['interes'],
+                                'numero_cuotas'    => $data['numero_cuotas'],
                                 'comicion'    => $data['comicion'],
                                 'estado'      => 'pendiente',
                                 'comicion_borrada' => false,
@@ -658,7 +704,7 @@ class PrestamoResource extends Resource
                     ->form([
                         Forms\Components\Placeholder::make('valor')
                             ->label('Valor Entregado')
-                            ->content(fn (Prestamo $record) => 
+                            ->content(fn (Prestamo $record) =>
                                 '$ ' . number_format(
                                     optional(
                                         $record->refinanciamientos()
@@ -681,6 +727,17 @@ class PrestamoResource extends Resource
                                         ->latest()
                                         ->first()
                                 )->interes . ' %'
+                            ),
+
+                        Forms\Components\Placeholder::make('numero_cuotas')
+                            ->label('Numero de Cuotas')
+                            ->content(fn (Prestamo $record) =>
+                                optional(
+                                    $record->refinanciamientos()
+                                        ->where('estado', 'pendiente')
+                                        ->latest()
+                                        ->first()
+                                )->numero_cuotas . ' Cuotas'
                             ),
 
                         Forms\Components\Placeholder::make('deuda_refinanciada_interes')
@@ -739,7 +796,7 @@ class PrestamoResource extends Resource
                                         $ref->update(['estado' => 'autorizado']);
                                     }
                                 }),
-    
+
                             Actions\Action::make('negar')
                                 ->label('Negar')
                                 ->color('danger')
@@ -761,7 +818,12 @@ class PrestamoResource extends Resource
             ])
             ->headerActions([])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([]),
+                // Tables\Actions\BulkActionGroup::make([
+                //      // Puedes agregar acciones masivas para los elementos eliminados si lo necesitas
+                //     Tables\Actions\DeleteBulkAction::make(),
+                //     Tables\Actions\RestoreBulkAction::make(),
+                //     Tables\Actions\ForceDeleteBulkAction::make(),
+                // ]),
             ]);
     }
 

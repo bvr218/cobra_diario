@@ -9,7 +9,7 @@ class RegistroAbonos extends Page
 {
     protected static ?string $navigationIcon = 'iconsax-bro-receipt-item'; // O el ícono que prefieras
 
-    protected static ?string $navigationGroup = 'Registros'; // O el grupo que prefieras
+    protected static ?string $navigationGroup = 'Registros';
 
     protected static ?string $navigationLabel = 'Liquidación';
 

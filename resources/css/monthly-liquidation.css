@@ -1,0 +1,737 @@
+/*
+|--------------------------------------------------------------------------
+| Estilos Aislados para la Vista de Liquidaciones Mensuales
+|--------------------------------------------------------------------------
+*/
+
+/* Contenedor principal de toda la vista */
+.liquidacion-mensual-container {
+    padding: 1rem;
+    width: 100%;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+    min-height: 500px;
+}
+
+@media (min-width: 640px) {
+    .liquidacion-mensual-container {
+        padding: 1.5rem;
+    }
+}
+
+/* --- Estilos del Botón Principal y Acciones --- */
+.liquidacion-mensual-header-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    box-sizing: border-box;
+}
+
+.liquidacion-mensual-select-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+    text-align: center;
+    border: none;
+    background-color: var(--mes-primary);
+    color: var(--mes-white);
+    box-shadow: var(--mes-shadow-md);
+    white-space: normal;
+    word-break: break-word;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.liquidacion-mensual-select-btn:hover {
+    background-color: var(--mes-primary-dark);
+    box-shadow: var(--mes-shadow-lg);
+}
+
+.liquidacion-mensual-reset-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+    cursor: pointer;
+    text-align: center;
+    box-shadow: var(--mes-shadow-sm);
+    white-space: normal;
+    word-break: break-word;
+    flex-shrink: 1;
+    min-width: 0;
+    background-color: var(--mes-gris-300);
+    color: var(--mes-gray-800);
+    border: 1px solid var(--mes-gris-400);
+}
+
+.liquidacion-mensual-reset-btn:hover {
+    background-color: var(--mes-gris-500);
+    box-shadow: var(--mes-shadow-md);
+    border-color: var(--mes-gris-600);
+}
+
+/* Dark Mode para botones */
+.dark .liquidacion-mensual-reset-btn {
+    background-color: var(--mes-gris-500);
+    color: var(--mes-gray-200);
+    border-color: var(--mes-gris-400);
+}
+.dark .liquidacion-mensual-reset-btn:hover {
+    background-color: var(--mes-gris-400);
+    color: var(--mes-gray-800);
+    border-color: var(--mes-gris-300);
+    box-shadow: var(--mes-shadow-md);
+}
+
+/* --- Estilos de los Modales de Selección --- */
+.liquidacion-mensual-modal-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    background-color: rgba(0, 0, 0, 0.5);
+    transition: opacity 0.3s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.liquidacion-mensual-modal-content {
+    position: relative;
+    width: 100%;
+    max-width: 32rem;
+    overflow: hidden;
+    border-radius: 0.5rem;
+    background-color: var(--mes-bg-light);
+    box-shadow: var(--mes-shadow-xl);
+    transition: all 0.3s ease-in-out;
+    padding: 1.5rem;
+    box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+    .liquidacion-mensual-modal-content {
+        max-width: 64rem !important;
+    }
+}
+
+.dark .liquidacion-mensual-modal-content {
+    background-color: var(--mes-bg-dark);
+}
+
+.liquidacion-mensual-modal-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--mes-text-light);
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.dark .liquidacion-mensual-modal-title {
+    color: var(--mes-text-dark);
+}
+
+.liquidacion-mensual-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
+    gap: 0.75rem;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-bottom: 1rem;
+    padding-top: 0.5rem; 
+}
+
+.liquidacion-mensual-grid-item {
+    padding: 0.75rem 0.5rem;
+    border-radius: 0.375rem;
+    background-color: var(--mes-gray-100);
+    color: var(--mes-gray-800);
+    font-weight: 500;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s, border-color 0.2s;
+    border: 1px solid var(--mes-gray-300);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    position: relative; 
+}
+
+.liquidacion-mensual-grid-item:hover {
+    background-color: var(--mes-primary-light);
+    color: var(--mes-primary-dark);
+    transform: translateY(-2px);
+    border-color: var(--mes-primary);
+    z-index: 10; 
+}
+
+.dark .liquidacion-mensual-grid-item {
+    background-color: var(--mes-gray-700);
+    color: var(--mes-gray-200);
+    border-color: var(--mes-gray-500);
+}
+
+.dark .liquidacion-mensual-grid-item:hover {
+    background-color: var(--mes-primary-dark-hover);
+    color: var(--mes-primary-light-hover);
+    border-color: var(--mes-primary-light);
+}
+
+.liquidacion-mensual-empty-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--mes-gray-500);
+    padding: 1rem;
+}
+
+.dark .liquidacion-mensual-empty-message {
+    color: var(--mes-gray-400);
+}
+
+.liquidacion-mensual-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--mes-border-light);
+    padding-top: 1rem;
+}
+
+.dark .liquidacion-mensual-modal-footer {
+    border-top-color: var(--mes-border-dark);
+}
+
+.liquidacion-mensual-close-btn,
+.liquidacion-mensual-back-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.liquidacion-mensual-close-btn {
+    background-color: var(--mes-gray-200);
+    color: var(--mes-gray-700);
+}
+
+.liquidacion-mensual-close-btn:hover {
+    background-color: var(--mes-gray-300);
+}
+
+.dark .liquidacion-mensual-close-btn {
+    background-color: var(--mes-gray-700);
+    color: var(--mes-gray-200);
+}
+.dark .liquidacion-mensual-close-btn:hover {
+    background-color: var(--mes-gray-600);
+}
+
+.liquidacion-mensual-back-btn {
+    background-color: transparent;
+    color: var(--mes-primary);
+    border-color: var(--mes-primary);
+}
+
+.liquidacion-mensual-back-btn:hover {
+    background-color: var(--mes-primary-light);
+    color: var(--mes-primary-dark);
+}
+
+.dark .liquidacion-mensual-back-btn {
+    color: var(--mes-primary-light);
+    border-color: var(--mes-primary-light);
+}
+.dark .liquidacion-mensual-back-btn:hover {
+    background-color: var(--mes-primary-dark-hover);
+    color: var(--mes-primary-light-hover);
+}
+
+/* --- Estilos de la Vista de Liquidación Mensual (cuando se selecciona) --- */
+.liquidacion-mensual-display-wrapper {
+    background-color: var(--mes-bg-light);
+    border: 1px solid var(--mes-border-light);
+    border-radius: 0.75rem;
+    box-shadow: 0 4px 6px var(--mes-shadow-color-light);
+    padding: 1.5rem;
+    margin-top: 2rem;
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 100%;
+}
+
+.dark .liquidacion-mensual-display-wrapper {
+    background-color: var(--mes-bg-dark);
+    border-color: var(--mes-border-dark);
+    box-shadow: 0 4px 6px var(--mes-shadow-color-dark);
+}
+
+.liquidacion-mensual-display-header {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    background-color: var(--mes-bg-light);
+    border-bottom: 3px solid var(--mes-primary);
+    box-shadow: var(--mes-shadow-md);
+    transition: all 0.2s ease-in-out;
+}
+
+.dark .liquidacion-mensual-display-header {
+    background-color: var(--mes-gray-700);
+    border-bottom-color: var(--mes-primary-light);
+    box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.3);
+}
+
+.liquidacion-mensual-display-title {
+    color: var(--mes-text-light);
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.dark .liquidacion-mensual-display-title {
+    color: var(--mes-text-dark);
+}
+
+.liquidacion-mensual-display-subtitle {
+    color: var(--mes-gray-600);
+    font-size: 1.125rem;
+    margin-top: 0.25rem;
+}
+
+.dark .liquidacion-mensual-display-subtitle {
+    color: var(--mes-gray-300);
+}
+
+.liquidacion-mensual-display-user {
+    font-weight: 600;
+}
+
+.liquidacion-mensual-display-role {
+    font-size: 1rem;
+}
+
+.liquidacion-mensual-display-period {
+    color: var(--mes-gray-500);
+    font-size: 0.875rem;
+    margin-top: 0.75rem;
+}
+
+.dark .liquidacion-mensual-display-period {
+    color: var(--mes-gray-400);
+}
+
+.liquidacion-mensual-display-timestamp {
+    color: var(--mes-gray-500);
+    font-size: 0.75rem;
+    line-height: 1rem;
+    margin-top: 0.25rem;
+    font-style: italic;
+}
+
+.dark .liquidacion-mensual-display-timestamp {
+    color: var(--mes-gray-400);
+}
+
+
+.liquidacion-mensual-data-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+@media(max-width: 640px) {
+    .liquidacion-mensual-data-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+}
+
+.liquidacion-mensual-data-item {
+    background-color: var(--mes-bg-light);
+    border: 1px solid var(--mes-border-light);
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    text-align: center;
+    box-shadow: 0 1px 2px var(--mes-shadow-color-light);
+    transition: transform 0.2s, box-shadow 0.2s;
+    overflow-wrap: break-word;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 5rem;
+}
+
+.dark .liquidacion-mensual-data-item {
+    background-color: var(--mes-bg-dark);
+    border-color: var(--mes-border-dark);
+    box-shadow: 0 1px 2px var(--mes-shadow-color-dark);
+}
+
+.liquidacion-mensual-clickable {
+    cursor: pointer;
+}
+
+.liquidacion-mensual-clickable:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px var(--mes-shadow-color-light);
+}
+
+.dark .liquidacion-mensual-clickable:hover {
+    box-shadow: 0 4px 8px var(--mes-shadow-color-dark);
+}
+
+.liquidacion-mensual-data-item-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--mes-text-light);
+}
+.dark .liquidacion-mensual-data-item-title {
+    color: var(--mes-text-dark);
+}
+
+.liquidacion-mensual-data-item-value {
+    font-size: 1rem;
+    font-weight: bold;
+    line-height: 1.2;
+    color: #1e40af;
+}
+.dark .liquidacion-mensual-data-item-value {
+    color: #60a5fa;
+}
+
+.liquidacion-mensual-value--positive {
+    color: var(--mes-secondary-color);
+}
+.liquidacion-mensual-value--negative {
+    color: var(--mes-accent-color);
+}
+
+/* --- Estilos para el estado vacío inicial --- */
+.liquidacion-mensual-empty-state {
+    padding: 2rem;
+    text-align: center;
+    color: var(--mes-gray-500);
+    margin-top: 2rem;
+    background-color: var(--mes-bg-light);
+    border: 1px solid var(--mes-border-light);
+    border-radius: 0.75rem;
+    box-shadow: var(--mes-shadow-sm);
+}
+
+.dark .liquidacion-mensual-empty-state {
+    background-color: var(--mes-bg-dark);
+    border-color: var(--mes-border-dark);
+    color: var(--mes-gray-400);
+}
+
+.liquidacion-mensual-empty-state-text {
+    font-size: 1.125rem;
+    font-weight: 500;
+}
+
+/* --- CLASES PARA LA SECCIÓN DE GRÁFICOS --- */
+.liquidacion-mensual-charts-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+@media (min-width: 1024px) {
+    .liquidacion-mensual-charts-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.liquidacion-mensual-chart-wrapper {
+    background-color: var(--mes-bg-light);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: var(--mes-shadow-md);
+    border: 1px solid var(--mes-border-light);
+    overflow: hidden;
+}
+
+.dark .liquidacion-mensual-chart-wrapper {
+    background-color: var(--mes-bg-dark);
+    border-color: var(--mes-border-dark);
+}
+
+.liquidacion-mensual-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.liquidacion-mensual-chart-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--mes-text-light);
+}
+.dark .liquidacion-mensual-chart-title {
+    color: var(--mes-text-dark);
+}
+
+.liquidacion-mensual-chart-totals {
+    font-size: 0.875rem;
+    color: var(--mes-gray-600);
+    display: flex;
+    gap: 1rem;
+}
+.dark .liquidacion-mensual-chart-totals {
+    color: var(--mes-gray-400);
+}
+
+.liquidacion-mensual-chart-totals span {
+    font-weight: 700;
+}
+
+.total-loans {
+    color: #10B981;
+}
+.total-refinancings {
+    color: #3B82F6;
+}
+
+.chart-container-scrollable {
+    overflow-x: auto;
+    padding-bottom: 8px;
+}
+
+/*
+|--------------------------------------------------------------------------
+| Definición de Variables CSS con Prefijo 'mes-'
+|--------------------------------------------------------------------------
+*/
+:root {
+    --mes-primary: #007bff;
+    --mes-primary-dark: #0056b3;
+    --mes-primary-light: #e6f2ff;
+    --mes-primary-dark-hover: #1e40af;
+    --mes-primary-light-hover: #93c5fd;
+
+    --mes-secondary-color: #28a745;
+    --mes-accent-color: #dc3545;
+
+    --mes-bg-light: #ffffff;
+    --mes-border-light: #e5e7eb;
+    --mes-text-light: #1f2937;
+    --mes-shadow-color-light: rgba(0, 0, 0, 0.05);
+
+    --mes-bg-dark: #1f2937;
+    --mes-border-dark: #374151;
+    --mes-text-dark: #f9fafb;
+    --mes-shadow-color-dark: rgba(0, 0, 0, 0.2);
+
+    --mes-gray-100: #f3f4f6;
+    --mes-gray-200: #e5e7eb;
+    --mes-gray-300: #d1d5db;
+    --mes-gray-400: #9ca3af;
+    --mes-gray-500: #6b7280;
+    --mes-gray-600: #4b5563;
+    --mes-gray-700: #374151;
+    --mes-gray-800: #1f2937;
+    --mes-white: #ffffff;
+
+    --mes-gris-100: #f3f4f6;
+    --mes-gris-200: #e5e7eb;
+    --mes-gris-300: #d1d5db;
+    --mes-gris-400: #9ca3af;
+    --mes-gris-500: #6b7280;
+    --mes-gris-600: #4b5563;
+    --mes-gris-700: #374151;
+    --mes-gris-800: #1f2937;
+
+    --mes-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --mes-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --mes-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --mes-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+
+/*
+|--------------------------------------------------------------------------
+| ESTILOS ADICIONALES PARA PANTALLA COMPLETA
+|--------------------------------------------------------------------------
+*/
+
+/* Contenedor relativo para posicionar el botón de expansión */
+.liquidacion-mensual-chart-wrapper-fullscreen {
+    position: relative;
+    background-color: var(--mes-bg-light);
+    padding: 1rem;
+    border-radius: 0.5rem;
+    box-shadow: var(--mes-shadow-md);
+    border: 1px solid var(--mes-border-light);
+    overflow: hidden;
+}
+
+.dark .liquidacion-mensual-chart-wrapper-fullscreen {
+    background-color: var(--mes-bg-dark);
+    border-color: var(--mes-border-dark);
+}
+
+/* Estilo del botón de expansión */
+.chart-fullscreen-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 10;
+    padding: 0.25rem;
+    border-radius: 0.375rem;
+    color: var(--mes-gray-500);
+    background-color: rgba(255, 255, 255, 0.5);
+    transition: all 0.2s ease-in-out;
+    border: none;
+}
+.chart-fullscreen-btn:hover {
+    color: var(--mes-gray-800);
+    background-color: rgba(240, 240, 240, 0.9);
+    transform: scale(1.1);
+}
+.dark .chart-fullscreen-btn {
+    color: var(--mes-gray-400);
+    background-color: rgba(31, 41, 55, 0.5);
+}
+.dark .chart-fullscreen-btn:hover {
+    color: var(--mes-gray-100);
+    background-color: rgba(55, 65, 81, 0.9);
+}
+.chart-fullscreen-btn svg {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+/* Estilos del modal de pantalla completa */
+.chart-fullscreen-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.75);
+    z-index: 50; /* Z-index alto para estar por encima de todo */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+.chart-fullscreen-modal-content {
+    position: relative;
+    background-color: var(--mes-bg-light);
+    border-radius: 0.5rem;
+    width: 95vw;
+    height: 90vh;
+    padding: 2rem;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+}
+.dark .chart-fullscreen-modal-content {
+    background-color: var(--mes-bg-dark);
+}
+
+/* Botón para cerrar el modal */
+.chart-fullscreen-close-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 60;
+    padding: 0.5rem;
+    color: var(--mes-gray-600);
+    background: transparent;
+    border: none;
+    border-radius: 99px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.chart-fullscreen-close-btn:hover {
+    background-color: var(--mes-gray-200);
+    color: var(--mes-gray-900);
+}
+.dark .chart-fullscreen-close-btn:hover {
+    background-color: var(--mes-gray-600);
+    color: var(--mes-gray-100);
+}
+.chart-fullscreen-close-btn svg {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+/* Mensaje para girar el dispositivo (inicialmente oculto) */
+.chart-fullscreen-rotate-device-prompt {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    color: var(--mes-text-light);
+    text-align: center;
+}
+.dark .chart-fullscreen-rotate-device-prompt {
+    color: var(--mes-text-dark);
+}
+.chart-fullscreen-rotate-device-prompt svg {
+    width: 3rem;
+    height: 3rem;
+    animation: bounce-rotate 2s infinite;
+}
+
+/* Animación para el icono de rotación */
+@keyframes bounce-rotate {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-20px); }
+    60% { transform: translateY(-10px); }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Media Query para Móviles: Forzar vista Landscape
+|--------------------------------------------------------------------------
+*/
+/* Se aplica en móviles y tablets en orientación vertical */
+@media (max-width: 1024px) and (orientation: portrait) {
+    .chart-fullscreen-modal-content {
+        /* Giramos el contenedor 90 grados */
+        transform: rotate(90deg);
+        transform-origin: center center;
+
+        /* Intercambiamos el ancho y el alto para que ocupe la pantalla girada */
+        width: 95vh;
+        height: 90vw;
+        max-width: 95vh;
+        max-height: 90vw;
+        padding: 1rem;
+    }
+
+    /* Ocultamos el gráfico y mostramos el mensaje para girar el dispositivo */
+    .chart-fullscreen-modal-content > div[x-ref="modalChartContainer"] {
+        display: none;
+    }
+    .chart-fullscreen-modal-content > .chart-fullscreen-rotate-device-prompt {
+        display: flex;
+    }
+}

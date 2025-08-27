@@ -60,6 +60,17 @@ trait ManagesModals
         $this->dispatchModalEvent('abrirModalGastosAutorizados', 'gastos', 'userId');
     }
 
+    public function abrirModalPrestamosFinalizadosClick(): void
+    {
+        // El filtro es por 'registrado_id', así que usamos 'registradoId' como nombre del parámetro
+        $this->dispatchModalEvent('abrirModalPrestamosFinalizados', 'préstamos finalizados', 'registradoId');
+    }
+
+    public function abrirModalAjustesDineroClick(): void
+    {
+        $this->dispatchModalEvent('abrirModalAjustesDinero', 'ajustes de dinero', 'userId');
+    }
+
     /**
      * Método auxiliar para despachar eventos de modales de manera genérica.
      */

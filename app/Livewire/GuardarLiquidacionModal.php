@@ -5,69 +5,66 @@ namespace App\Livewire;
 use Livewire\Component;
 use Filament\Notifications\Notification;
 use App\Models\RegistroLiquidacion;
+use App\Models\DineroBase;
+use App\Models\HistorialMovimiento;
+use App\Models\User;
 use Illuminate\Support\Carbon;
-use App\Models\User; // Necesario para la validación y el user_id
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class GuardarLiquidacionModal extends Component
 {
     public bool $showModal = false;
     public ?string $liquidacionNombre = null;
-    public ?int $usuarioId = null; // Para recibir el ID del usuario
-    public ?string $fechaInicio = null; // Para recibir la fecha de inicio
-    public ?string $fechaFin = null;   // Para recibir la fecha de fin
 
-    // Reglas de validación para el nombre de la liquidación
+    public ?User $usuario = null;
+    public ?string $fechaInicio = null;
+    public ?string $fechaFin = null;
+    public ?string $rolSeleccionado = null;
+    public array $stats = [];
+    public array $listas = [];
+    public string $type = 'diario';
+
     protected array $rules = [
         'liquidacionNombre' => 'required|string|max:50',
-        'usuarioId' => 'required|exists:users,id', // Asegura que el usuario exista
-        'fechaInicio' => 'required|date',
-        'fechaFin' => 'required|date|after_or_equal:fechaInicio',
     ];
 
-    // Mensajes de error personalizados para la validación
     protected array $messages = [
         'liquidacionNombre.required' => 'El nombre de la liquidación es obligatorio.',
         'liquidacionNombre.max' => 'El nombre no puede exceder los 50 caracteres.',
-        'usuarioId.required' => 'No hay un usuario seleccionado para la liquidación.',
-        'usuarioId.exists' => 'El usuario seleccionado no es válido.',
-        'fechaInicio.required' => 'La fecha de inicio es obligatoria para guardar la liquidación.',
-        'fechaFin.required' => 'La fecha de fin es obligatoria para guardar la liquidación.',
-        'fechaFin.after_or_equal' => 'La fecha de fin debe ser igual o posterior a la fecha de inicio.',
     ];
 
-    // Listeners: escucha un evento para abrir el modal
     protected $listeners = [
         'openGuardarLiquidacionModal' => 'openModal',
     ];
 
-    public function openModal(?int $usuarioId, ?string $fechaInicio, ?string $fechaFin): void
+    public function openModal(
+        User $usuario,
+        ?string $fechaInicio,
+        ?string $fechaFin,
+        ?string $rolSeleccionado,
+        array $stats,
+        array $listas,
+        string $type = 'diario'
+    ): void
     {
-        // Asigna las propiedades recibidas
-        $this->usuarioId = $usuarioId;
+        if (!$fechaInicio || !$fechaFin || empty($stats)) {
+             Notification::make()
+                ->title('Error de Datos')
+                ->body('Faltan datos esenciales (fechas o estadísticas) para guardar la liquidación.')
+                ->danger()
+                ->send();
+            return;
+        }
+
+        $this->usuario = $usuario;
         $this->fechaInicio = $fechaInicio;
         $this->fechaFin = $fechaFin;
-        $this->liquidacionNombre = null; // Reinicia el nombre cada vez que se abre
-
-        // Validar antes de mostrar el modal (esto es solo una validación previa para UX)
-        if (!$this->usuarioId) {
-            Notification::make()
-                ->title('Error')
-                ->body('No se ha recibido un usuario válido para guardar la liquidación.')
-                ->danger()
-                ->send();
-            return;
-        }
-
-        // Si se va a guardar una liquidación, se espera un rango de fechas.
-        // Aquí puedes hacer una validación más específica si es necesario.
-        if (!$this->fechaInicio || !$this->fechaFin) {
-             Notification::make()
-                ->title('Error')
-                ->body('Debe haber un rango de fecha y hora definido para guardar la liquidación.')
-                ->danger()
-                ->send();
-            return;
-        }
+        $this->rolSeleccionado = $rolSeleccionado;
+        $this->stats = $stats;
+        $this->listas = $listas;
+        $this->type = $type;
+        $this->liquidacionNombre = null;
 
         $this->showModal = true;
     }
@@ -75,40 +72,108 @@ class GuardarLiquidacionModal extends Component
     public function closeModal(): void
     {
         $this->showModal = false;
-        $this->reset(['liquidacionNombre', 'usuarioId', 'fechaInicio', 'fechaFin']); // Limpia todo al cerrar
+        $this->reset(['liquidacionNombre', 'usuario', 'fechaInicio', 'fechaFin', 'rolSeleccionado', 'stats', 'listas', 'type']);
     }
 
     public function guardarLiquidacion(): void
     {
-        // Realiza la validación. Las reglas están en la propiedad $rules.
         $this->validate();
 
         try {
-            RegistroLiquidacion::create([
-                'nombre' => $this->liquidacionNombre,
-                'user_id' => $this->usuarioId,
-                'desde' => Carbon::parse($this->fechaInicio),
-                'hasta' => Carbon::parse($this->fechaFin),
-            ]);
+            DB::transaction(function () {
+                $dineroBase = DineroBase::where('user_id', $this->usuario->id)->first();
+
+                // === INICIO DE LA NUEVA LÓGICA DE TRANSFERENCIA Y AJUSTE ===
+                if ($dineroBase) {
+                    $dineroEnManoOperaciones = $dineroBase->monto;
+                    $dineroEnCajaAcumulado = $dineroBase->dinero_en_mano;
+
+                    // Guardamos los estados originales para el historial
+                    $estadoAntes = ['monto_mano' => $dineroEnManoOperaciones, 'monto_caja' => $dineroEnCajaAcumulado];
+
+                    if ($dineroEnManoOperaciones > 0) {
+                        // Caso 1: Dinero en mano es POSITIVO. Se transfiere todo a la caja.
+                        $dineroBase->dinero_en_mano += $dineroEnManoOperaciones;
+                        $dineroBase->monto = 0;
+                        $dineroBase->save();
+
+                        HistorialMovimiento::create([
+                            'user_id' => $this->usuario->id,
+                            'tipo' => 'transferencia_cierre_positivo',
+                            'descripcion' => "Transferencia de Mano a Caja al guardar liquidación '{$this->liquidacionNombre}'.",
+                            'monto' => $dineroEnManoOperaciones,
+                            'referencia_id' => $dineroBase->id,
+                            'tabla_origen' => 'dinero_bases',
+                            'es_edicion' => true,
+                            'fecha' => now(),
+                            'cambio_desde' => json_encode($estadoAntes),
+                            'cambio_hacia' => json_encode(['monto_mano' => 0, 'monto_caja' => $dineroBase->dinero_en_mano]),
+                        ]);
+
+                    } elseif ($dineroEnManoOperaciones < 0) {
+                        // Caso 2: Dinero en mano es NEGATIVO. Se intenta cubrir con la caja.
+                        $montoACubrir = abs($dineroEnManoOperaciones);
+                        $cubiertoPorCaja = min($montoACubrir, $dineroEnCajaAcumulado);
+
+                        if ($cubiertoPorCaja > 0) {
+                            $dineroBase->dinero_en_mano -= $cubiertoPorCaja; // Se resta de la caja
+                            $dineroBase->monto += $cubiertoPorCaja;         // Se suma al dinero en mano (haciéndolo menos negativo)
+                            $dineroBase->save();
+
+                            HistorialMovimiento::create([
+                                'user_id' => $this->usuario->id,
+                                'tipo' => 'transferencia_cierre_negativo',
+                                'descripcion' => "Compensación de Mano con Caja al guardar liquidación '{$this->liquidacionNombre}'.",
+                                'monto' => $cubiertoPorCaja,
+                                'referencia_id' => $dineroBase->id,
+                                'tabla_origen' => 'dinero_bases',
+                                'es_edicion' => true,
+                                'fecha' => now(),
+                                'cambio_desde' => json_encode($estadoAntes),
+                                'cambio_hacia' => json_encode(['monto_mano' => $dineroBase->monto, 'monto_caja' => $dineroBase->dinero_en_mano]),
+                            ]);
+                        }
+                    }
+                }
+                // === FIN DE LA NUEVA LÓGICA ===
+
+                // Ahora guardamos el registro de liquidación con los datos calculados
+                $datosParaGuardar = array_merge(
+                    [
+                        'nombre_usuario' => $this->usuario->name,
+                        'rol' => $this->rolSeleccionado,
+                        'fecha_guardado' => now()->toDateTimeString(),
+                    ],
+                    $this->stats,
+                    ['listas_detalladas' => $this->listas]
+                );
+
+                RegistroLiquidacion::create([
+                    'nombre' => $this->liquidacionNombre,
+                    'user_id' => $this->usuario->id,
+                    'desde' => Carbon::parse($this->fechaInicio),
+                    'hasta' => Carbon::parse($this->fechaFin),
+                    'datos_liquidacion' => $datosParaGuardar,
+                    'type' => $this->type,
+                ]);
+            });
 
             Notification::make()
-                ->title('Liquidación Guardada')
-                ->body('La liquidación ha sido guardada exitosamente.')
+                ->title('Liquidación Guardada y Procesada')
+                ->body('La liquidación se guardó y los balances de dinero fueron ajustados exitosamente.')
                 ->success()
                 ->send();
 
             $this->closeModal();
-            // Opcional: Emitir un evento para que RegistroAbonos sepa que se guardó
-            // y pueda, por ejemplo, recalcular estadísticas o limpiar su estado.
             $this->dispatch('liquidacionGuardada');
 
         } catch (\Exception $e) {
             Notification::make()
-                ->title('Error al guardar liquidación')
-                ->body('Ocurrió un error: ' . $e->getMessage())
+                ->title('Error al Guardar Liquidación')
+                ->body('Ocurrió un error inesperado: ' . $e->getMessage())
                 ->danger()
                 ->send();
-            \Log::error('Error al guardar liquidación en modal: ' . $e->getMessage());
+            Log::error("Error al guardar liquidación o transferir dinero: " . $e->getMessage());
         }
     }
 

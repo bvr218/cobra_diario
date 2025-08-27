@@ -9,9 +9,13 @@ use App\Models\HistorialMovimiento;
 use Illuminate\Support\Facades\DB;
 use App\Notifications\NuevaNotificacion;
 use Illuminate\Support\Facades\Log;
+use App\Traits\ManagesUserBalance;
 
 class AbonoObserver
 {
+
+    use ManagesUserBalance;
+
     /**
      * Handle the Abono "created" event.
      * Al crear un abono, solo ajustamos dinero_base.
@@ -138,30 +142,23 @@ class AbonoObserver
         $this->deleted($abono);
     }
 
-    /**
-     * Ajusta el dinero base del usuario.
-     * @param int $userId El ID del usuario cuyo dinero base será ajustado.
-     * @param float $monto El monto a ajustar (positivo para sumar, negativo para restar).
-     */
     protected function ajustarDineroBase(int $userId, float $monto): void
     {
-        if ($monto === 0) {
+        if ($monto === 0.0) {
             return;
         }
 
-        DB::transaction(function () use ($userId, $monto) {
-            $dineroBase = DineroBase::firstOrCreate(
-                ['user_id' => $userId],
-                ['monto' => 0, 'monto_general' => 0] // Aseguramos que monto_general también se inicialice si es un nuevo registro
-            );
-
-            if ($monto > 0) {
-                $dineroBase->increment('monto', $monto);
-            } else {
-                $dineroBase->decrement('monto', abs($monto));
-            }
-        });
-        Log::info("Dinero Base ajustado para User ID: {$userId} por monto: {$monto}.");
+        // <-- CAMBIO: Lógica simplificada con el Trait.
+        if ($monto > 0) {
+            // Un monto positivo es un ingreso de dinero, se acredita.
+            $this->creditToUserBalance($userId, $monto);
+        } else {
+            // Un monto negativo (de una edición que reduce el valor del abono)
+            // se convierte en un débito por el valor absoluto.
+            $this->debitFromUserBalance($userId, abs($monto));
+        }
+        
+        Log::info("AbonoObserver: Dinero Base ajustado para User ID: {$userId} por un monto de: {$monto}.");
     }
 
     /**
@@ -186,55 +183,17 @@ class AbonoObserver
         Log::info("Monto General ajustado para User ID: {$userId} por impacto: {$montoImpacto}. Abono ID: {$abonoId}.");
     }
 
-    /**
-     * La lógica de revertirAbono original es para dinero_base, y tiene una lógica de cascada (usuario -> oficina -> admin).
-     * Sigue siendo necesaria para la reversión del dinero_base al eliminar un abono.
-     */
     protected function revertirAbono(int $userId, float $monto): void
     {
-        if ($monto === 0) {
+        if ($monto <= 0) {
             return;
         }
 
-        DB::transaction(function () use ($userId, $monto) {
-            $faltante = $monto;
-            $user     = User::find($userId);
+        // <-- CAMBIO: Se reemplaza toda la lógica de cascada anterior
+        // por una única llamada al método de débito del Trait.
+        $this->debitFromUserBalance($userId, $monto);
 
-            // Revertir del dinero base del usuario
-            if ($user && $user->dineroBase) {
-                $saldo = $user->dineroBase->monto;
-                if ($saldo >= $faltante) {
-                    $user->dineroBase->decrement('monto', $faltante);
-                    return; // Terminamos si se cubrió todo
-                }
-                $user->dineroBase->update(['monto' => 0]);
-                $faltante -= $saldo;
-            }
-
-            // Revertir del dinero base de la oficina (si aplica y aún queda faltante)
-            if ($faltante > 0 && $user && $user->oficina_id) {
-                $ofi = User::find($user->oficina_id);
-                if ($ofi && $ofi->hasRole('oficina') && $ofi->dineroBase) {
-                    $saldoOfi = $ofi->dineroBase->monto;
-                    if ($saldoOfi >= $faltante) {
-                        $ofi->dineroBase->decrement('monto', $faltante);
-                        return;
-                    }
-                    $ofi->dineroBase->update(['monto' => 0]);
-                    $faltante -= $saldoOfi;
-                }
-            }
-
-            // Revertir del dinero base del administrador (si aplica y aún queda faltante)
-            if ($faltante > 0) {
-                $admin = User::role('admin')->whereHas('dineroBase')->first();
-                if ($admin && $admin->dineroBase) {
-                    $admin->dineroBase->decrement('monto', $faltante);
-                } else {
-                    Log::warning("AbonoObserver@revertirAbono: No se pudo encontrar un admin con dineroBase para revertir el faltante de {$faltante}.");
-                }
-            }
-        });
+        Log::info("AbonoObserver: Reversión de abono procesada para User ID: {$userId} por un monto de: {$monto}.");
     }
 
     /**

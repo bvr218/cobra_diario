@@ -41,24 +41,34 @@ class PrestamosEntregadosModal extends Component
             ->with(['cliente', 'agenteAsignado'])
             ->where('agente_asignado', $this->agenteAsignadoId);
 
+        // --- INICIO DE LA CORRECCIÓN ---
         if ($this->fechaInicio && $this->fechaFin) {
-            $query->whereBetween('created_at', [
-                Carbon::parse($this->fechaInicio), // Usar la fecha y hora exactas
-                Carbon::parse($this->fechaFin)     // Usar la fecha y hora exactas
-            ]);
-        }
+            // Función anónima con la lógica de fecha correcta
+            $dateFilterLogic = function ($q) {
+                $q->where(function ($subQuery) {
+                    // Opción 1: Si no tiene fecha de autorización, usa la de creación
+                    $subQuery->whereNull('authorized_at')
+                             ->whereBetween('created_at', [Carbon::parse($this->fechaInicio), Carbon::parse($this->fechaFin)]);
+                })->orWhere(function ($subQuery) {
+                    // Opción 2: Si SÍ tiene fecha de autorización, usa esa fecha
+                    $subQuery->whereNotNull('authorized_at')
+                             ->whereBetween('authorized_at', [Carbon::parse($this->fechaInicio), Carbon::parse($this->fechaFin)]);
+                });
+            };
 
-        // Modificación clave aquí:
+            $query->where($dateFilterLogic); // Aplicar la lógica al query principal
+        }
+        // --- FIN DE LA CORRECCIÓN ---
+
+        // El resto de la lógica del método no cambia
         if (str_starts_with($this->modalTitle, 'Préstamos Entregados')) {
-            // Para "Préstamos Entregados", mostrar activos, autorizados y pendientes
             $query->whereIn('estado', ['activo', 'autorizado', 'pendiente']);
         } else {
-            // Para "Detalle de Total Prestado" y "Detalle de Total Prestado (Con Interés)", solo activos y autorizados
             $query->whereIn('estado', ['activo', 'autorizado']);
         }
         $query->orderBy('posicion_ruta', 'asc');
 
-        $this->prestamos = $query->get(); // Obtiene la colección de préstamos
+        $this->prestamos = $query->get();
         $this->showModal = true;
     }
 

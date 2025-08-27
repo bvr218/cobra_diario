@@ -12,15 +12,11 @@ use Filament\Tables\Filters\Filter;
 use Filament\Forms\Components\DatePicker;
 use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Resources\HistorialMovimientoResource\Pages;
-// Asegúrate de que esta importación esté presente
 use Filament\Tables\Actions\DeleteBulkAction;
-
 
 class HistorialMovimientoResource extends Resource
 {
-
     protected static ?string $model = HistorialMovimiento::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
     protected static ?string $navigationGroup = 'Sistema';
     protected static ?string $navigationLabel = 'Historial de Movimientos';
@@ -30,10 +26,15 @@ class HistorialMovimientoResource extends Resource
     {
         return $table
             ->columns([
+                // 1. COLUMNA MODIFICADA PARA MOSTRAR USUARIOS BORRADOS
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Usuario')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->getStateUsing(function ($record) {
+                        // Obtenemos el usuario incluyendo los borrados para mostrar el nombre
+                        return $record->user()->withTrashed()->first()?->name ?? 'Usuario Eliminado';
+                    }),
 
                 Tables\Columns\TextColumn::make('tipo')
                     ->label('Tipo')
@@ -65,21 +66,30 @@ class HistorialMovimientoResource extends Resource
 
                 Tables\Columns\TextColumn::make('fecha')
                     ->label('Fecha de Movimiento')
-                    ->dateTime('d/m/Y H:i')
+                    ->dateTime('d/m/Y H:i:s')
                     ->sortable(),
             ])
             ->filters([
+                // 2. FILTRO DE SELECCIÓN MODIFICADO PARA INCLUIR USUARIOS BORRADOS
                 SelectFilter::make('user_id')
                     ->label('Usuario')
-                    ->relationship('user', 'name')
+                    ->relationship('user', 'name', fn (Builder $query) => $query->withTrashed())
                     ->preload()
                     ->searchable(),
+                
+                // 3. NUEVO FILTRO PARA VER REGISTROS HUÉRFANOS
+                Filter::make('usuario_eliminado')
+                    ->label('Usuario Eliminado')
+                    ->toggle()
+                    ->query(fn (Builder $query): Builder => $query->whereHas('user', function (Builder $userQuery) {
+                        $userQuery->onlyTrashed();
+                    })),
 
                 SelectFilter::make('tipo')
                     ->options([
-                        'creación'          => 'Creación',
-                        'edición'           => 'Edición',
-                        'eliminación'       => 'Eliminación',
+                        'creación'           => 'Creación',
+                        'edición'            => 'Edición',
+                        'eliminación'        => 'Eliminación',
                         'ajuste_dinero_base' => 'Ajuste',
                     ]),
 
@@ -90,32 +100,20 @@ class HistorialMovimientoResource extends Resource
                         0 => 'No',
                     ]),
 
-                Filter::make('fecha_desde')
-                    ->label('Fecha desde')
+                Filter::make('fecha_range')
+                    ->label('Rango de Fechas')
                     ->form([
                         DatePicker::make('fecha_desde')->label('Desde'),
-                    ])
-                    ->query(function (Builder $query, array $data) {
-                        if ($data['fecha_desde']) {
-                            $query->whereDate('fecha', '>=', $data['fecha_desde']);
-                        }
-                    }),
-
-                Filter::make('fecha_hasta')
-                    ->label('Fecha hasta')
-                    ->form([
                         DatePicker::make('fecha_hasta')->label('Hasta'),
                     ])
-                    ->query(function (Builder $query, array $data) {
-                        if ($data['fecha_hasta']) {
-                            $query->whereDate('fecha', '<=', $data['fecha_hasta']);
-                        }
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when($data['fecha_desde'], fn (Builder $q) => $q->whereDate('fecha', '>=', $data['fecha_desde']))
+                            ->when($data['fecha_hasta'], fn (Builder $q) => $q->whereDate('fecha', '<=', $data['fecha_hasta']));
                     }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-
-                // Ver anterior: ahora visible si es edición o si es creación
                 Tables\Actions\Action::make('ver_anterior')
                     ->label('Ver anterior')
                     ->icon('heroicon-o-eye')
@@ -127,20 +125,10 @@ class HistorialMovimientoResource extends Resource
                     ->action(fn () => null)
                     ->modalContent(function ($record) {
                         $datos = $record->cambio_desde ?? [];
-
-                        if (is_string($datos)) {
-                            $datos = json_decode($datos, true);
-                        }
-                        if (!is_array($datos)) {
-                            $datos = [];
-                        }
-
-                        return view('components.historial.json-modal', [
-                            'titulo' => 'Estado anterior',
-                            'datos'   => $datos,
-                        ]);
+                        if (is_string($datos)) $datos = json_decode($datos, true);
+                        if (!is_array($datos)) $datos = [];
+                        return view('components.historial.json-modal', ['titulo' => 'Estado anterior', 'datos' => $datos]);
                     }),
-
                 Tables\Actions\Action::make('ver_actualizado')
                     ->label('Ver actualizado')
                     ->icon('heroicon-o-document-text')
@@ -152,25 +140,15 @@ class HistorialMovimientoResource extends Resource
                     ->action(fn () => null)
                     ->modalContent(function ($record) {
                         $datos = $record->cambio_hacia ?? [];
-
-                        if (is_string($datos)) {
-                            $datos = json_decode($datos, true);
-                        }
-                        if (!is_array($datos)) {
-                            $datos = [];
-                        }
-
-                        return view('components.historial.json-modal', [
-                            'titulo' => 'Estado actualizado',
-                            'datos'   => $datos,
-                        ]);
+                        if (is_string($datos)) $datos = json_decode($datos, true);
+                        if (!is_array($datos)) $datos = [];
+                        return view('components.historial.json-modal', ['titulo' => 'Estado actualizado', 'datos' => $datos]);
                     }),
             ])
-            // AÑADIENDO LA ACCIÓN EN MASA PARA BORRAR
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ])->label('Acciones en masa'), // Opcional: etiqueta para el grupo de acciones
+                // Tables\Actions\BulkActionGroup::make([
+                //     DeleteBulkAction::make(),
+                // ])->label('Acciones en masa'),
             ])
             ->defaultSort('fecha', 'desc')
             ->paginationPageOptions([10, 25, 50, 100, 500])

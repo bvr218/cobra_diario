@@ -20,6 +20,8 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use App\Http\Middleware\CheckSystemClosed;
 use App\Filament\Widgets\StatsOverview;
 use App\Filament\Widgets\ClientesPorReputacionChart;
+use App\Filament\Widgets\AgenteStatsOverview;
+use App\Filament\Widgets\TotalPrestamosStatWidget;
 
 
 class AdminPanelProvider extends PanelProvider
@@ -42,6 +44,7 @@ class AdminPanelProvider extends PanelProvider
             })
             ->colors([
                 'primary' => Color::Amber,
+                'morado' => Color::rgb('rgb(98, 0, 128)'),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
@@ -53,7 +56,8 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 StatsOverview::class,
                 ClientesPorReputacionChart::class,
-                // Aquí puedes añadir otros widgets personalizados que quieras mostrar
+                TotalPrestamosStatWidget::class,
+                AgenteStatsOverview::class,
             ])
             ->middleware([
                 EncryptCookies::class,

@@ -16,67 +16,94 @@
         {{-- Selector de fecha y HORA --}}
         @if($usuarioSeleccionado)
             <div class="date-selector-container">
-                @unless($lockDateFilter)
-                    <div class="date-selector-radio-group">
-                        <label class="date-selector-radio-label">
-                            <input type="radio"
-                                   wire:model.live="filtrarPorFecha"
-                                   value="0"
-                                   wire:change="computeStats">
-                            Todos los Días
-                        </label>
-                        <label class="date-selector-radio-label">
-                            <input type="radio"
-                                   wire:model.live="filtrarPorFecha"
-                                   value="1"
-                                   wire:change="computeStats">
-                            Día Individual
-                        </label>
-                    </div>
-                    @if($filtrarPorFecha)
-                        <div class="flex flex-col sm:flex-row gap-4 mt-2">
-                            <div class="flex flex-col flex-1">
-                                <label for="fechaInicio"
-                                       class="mb-1 font-semibold text-gray-700 dark:text-gray-300">
-                                    Desde (Fecha y Hora)
-                                </label>
-                                <input id="fechaInicio"
-                                       type="datetime-local"
-                                       wire:model.live="fechaInicio"
-                                       wire:change="computeStats"
-                                       class="date-selector-input">
-                            </div>
-                            <div class="flex flex-col flex-1">
-                                <label for="fechaFin"
-                                       class="mb-1 font-semibold text-gray-700 dark:text-gray-300">
-                                    Hasta (Fecha y Hora)
-                                </label>
-                                <input id="fechaFin"
-                                       type="datetime-local"
-                                       wire:model.live="fechaFin"
-                                       wire:change="computeStats"
-                                       class="date-selector-input">
-                            </div>
+                {{-- En este div agruparemos los controles de fecha para que se mantengan juntos --}}
+                <div class="date-controls-wrapper">
+                    @unless($lockDateFilter)
+                        {{-- INICIO DE LA LÓGICA RESTAURADA --}}
+                        <div class="date-selector-radio-group">
+                            <label class="date-selector-radio-label">
+                                <input type="radio"
+                                       wire:model.live="filtrarPorFecha"
+                                       value="0"
+                                       wire:change="computeStats">
+                                Todos los Días
+                            </label>
+                            <label class="date-selector-radio-label">
+                                <input type="radio"
+                                       wire:model.live="filtrarPorFecha"
+                                       value="1"
+                                       wire:change="computeStats">
+                                Día Individual
+                            </label>
                         </div>
-                    @endif
-                @else
-                    {{-- Rango fijo para usuario con permiso registro.view --}}
-                    <div class="p-2 bg-gray-100 rounded">
-                        <p class="text-sm text-gray-700 dark:text-gray-300">
-                            Liquidaciones del día:
-                            <strong>{{ \Carbon\Carbon::parse($fechaInicio)->format('d/m/Y H:i') }}</strong>
-                             al 
-                            <strong>{{ \Carbon\Carbon::parse($fechaFin)->format('d/m/Y H:i') }}</strong>
-                        </p>
-                    </div>
-                @endunless
+                        
+                        @if($filtrarPorFecha)
+                            <div class="flex flex-col sm:flex-row gap-4 sm:gap-2 mt-2 sm:mt-0">
+                                {{-- Input "Desde" --}}
+                                <div class="flex flex-col flex-1">
+                                    <label for="fechaInicio"
+                                           class="mb-1 font-semibold text-gray-700 dark:text-gray-300">
+                                        Desde (Fecha y Hora)
+                                    </label>
+                                    <input id="fechaInicio"
+                                           type="datetime-local"
+                                           wire:model.live="fechaInicio"
+                                           wire:change="computeStats"
+                                           class="date-selector-input">
+                                </div>
+                                {{-- Input "Hasta" --}}
+                                <div class="flex flex-col flex-1">
+                                    <label for="fechaFin"
+                                           class="mb-1 font-semibold text-gray-700 dark:text-gray-300">
+                                        Hasta (Fecha y Hora)
+                                    </label>
+                                    <input id="fechaFin"
+                                           type="datetime-local"
+                                           wire:model.live="fechaFin"
+                                           wire:change="computeStats"
+                                           class="date-selector-input">
+                                </div>
+                            </div>
+                        @endif
+                        {{-- FIN DE LA LÓGICA RESTAURADA --}}
+                    @else
+                        {{-- Rango fijo para usuario con permiso registro.view --}}
+                        <div class="p-2 bg-gray-100 rounded">
+                            <p class="text-sm text-gray-700 dark:text-gray-300">
+                                Liquidaciones del día:
+                                <strong>{{ \Carbon\Carbon::parse($fechaInicio)->format('d/m/Y H:i') }}</strong>
+                                 al
+                                <strong>{{ \Carbon\Carbon::parse($fechaFin)->format('d/m/Y H:i') }}</strong>
+                            </p>
+                        </div>
+                    @endunless
+                </div>
+
+                {{-- Contenedor y Label para el Botón de Recarga --}}
+                <div class="flex flex-col">
+                    {{-- Este label invisible alinea el botón con los inputs de fecha (si están visibles) --}}
+                    <label class="mb-1 font-semibold text-gray-700 dark:text-gray-300">
+                          {{-- Espacio en blanco sin salto de línea para ocupar altura --}}
+                    </label>
+                    
+                    <button
+                        type="button"
+                        wire:click="reloadStats"
+                        class="reload-button"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
+                        Recargar
+                    </button>
+                </div>
             </div>
-        @endif
+        @endif {{-- Cierre del @if($usuarioSeleccionado) --}}
 
         {{-- Modal lista de usuarios --}}
         @if($showList)
             <div class="modal-container">
-                <button wire:click="closeList" class="close-btn">&times;</button>
+                <button wire:click="closeList" class="close-btn">×</button>
                 <div class="users-grid">
                     @foreach($usuarios as $u)
                         <button wire:click="selectUsuario({{ $u->id }})" class="user-btn">
@@ -102,7 +129,7 @@
                     <div class="info-item-container" title="Monto base con el que el usuario inicia sus operaciones.">
                         <h3>Dinero Inicial</h3>
                         <span class="info-value">
-                            $<span x-data="{ amount: @js($dineroInicialDelUsuario) }"
+                            $<span x-data="{ amount: @js($dineroInicial) }"
                                      x-text="new Intl.NumberFormat('es-CO').format(amount)"></span>
                         </span>
                     </div>
@@ -117,8 +144,7 @@
                     </div>
 
                     {{-- Dinero en Caja --}}
-                    <div class="info-item-container cursor-pointer"
-                         wire:click="openTransferenciaDineroEnManoModal" title="Dinero físico que el agente debería tener. Se puede transferir desde/hacia el dinero en mano.">
+                    <div class="info-item-container" title="Dinero físico que el agente debería tener.">
                         <h3>Dinero en Caja</h3>
                         <span class="info-value">
                             $<span x-data="{ amount: @js($dineroEnMano) }"
@@ -173,7 +199,7 @@
                         </span>
                     </div>
 
-                    {{-- Valor de Refinanciaciones (Con Interés) --}}
+                    <!-- {{-- Valor de Refinanciaciones (Con Interés) --}}
                     <div wire:click="abrirModalValorRefinanciacionesConInteresClick"
                          class="info-item-container cursor-pointer" title="Suma total del valor de las refinanciaciones, incluyendo los intereses.">
                         <h3>Valor de Refinanciaciones (Con Interés)</h3>
@@ -181,7 +207,7 @@
                             $<span x-data="{ amount: @js($deudaRefinanciadaInteresTotal) }"
                                      x-text="new Intl.NumberFormat('es-CO').format(amount)"></span>
                         </span>
-                    </div>
+                    </div> -->
 
                     {{-- Total Seguros --}}
                     <div wire:click="abrirModalComisionesRegistradasClick"
@@ -189,6 +215,15 @@
                         <h3>Total Seguros</h3>
                         <span class="info-value">
                             ${{ number_format($totalComision, 0, ',', '.') }}
+                        </span>
+                    </div>
+
+                    {{-- NUEVO CUADRO: Préstamos Finalizados --}}
+                    <div wire:click="abrirModalPrestamosFinalizadosClick"
+                         class="info-item-container cursor-pointer" title="Cantidad de préstamos completados en el período. Haz clic para ver el detalle.">
+                        <h3>Préstamos Finalizados</h3>
+                        <span class="info-value">
+                            {{ $prestamosFinalizadosCount }}
                         </span>
                     </div>
 
@@ -220,6 +255,16 @@
                                      x-text="new Intl.NumberFormat('es-CO').format(amount)"></span>
                             ($<span x-data="{ amount: @js($gastosNoAutorizados) }"
                                      x-text="new Intl.NumberFormat('es-CO').format(amount)"></span>)
+                        </span>
+                    </div>
+
+
+                    {{-- NUEVO CUADRO: Ajustes de dinero --}}
+                    <div wire:click="abrirModalAjustesDineroClick"
+                        class="info-item-container cursor-pointer" title="Cantidad de ajustes de dinero realizados en el período. Haz clic para ver el detalle.">
+                        <h3>Ajustes de dinero</h3>
+                        <span class="info-value">
+                            {{ $ajustesDineroCount }}
                         </span>
                     </div>
 
@@ -285,58 +330,7 @@
     <livewire:refinanciaciones.refinanciaciones-modal wire:key="refinanciaciones-modal" />
     <livewire:gastos-autorizados-modal wire:key="gastos-autorizados-modal" />
     <livewire:guardar-liquidacion-modal />
+    <livewire:prestamos.prestamos-finalizados-modal wire:key="prestamos-finalizados-modal" />
+    <livewire:ajustes-dinero-modal wire:key="ajustes-dinero-modal" />
 
-    {{-- Modal para Transferencia de Dinero en Mano --}}
-    @if ($showTransferenciaDineroEnManoModal)
-        <div class="fixed inset-0 z-40 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true" wire:click="closeTransferenciaDineroEnManoModal"></div>
-
-        <div class="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
-            <div
-                class="relative w-full max-w-md overflow-hidden rounded-lg bg-white shadow-xl transition-all dark:bg-gray-800 sm:my-8"
-                role="dialog" aria-modal="true" aria-labelledby="modal-transferencia-dinero-mano-headline"
-                @click.away="$wire.closeTransferenciaDineroEnManoModal()"
-                wire:key="transferencia-dinero-modal-{{ $usuarioSeleccionado?->id ?? 'no-user' }}"
-            >
-                {{-- Encabezado del Modal --}}
-                <div class="border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800 sm:px-6">
-                    <div class="flex items-center justify-between">
-                        <h3 class="text-lg font-medium leading-6 text-gray-900 dark:text-white" id="modal-transferencia-dinero-mano-headline">
-                            Transferir Dinero Mano <=> Caja
-                        </h3>
-                        <button
-                            type="button"
-                            wire:click="closeTransferenciaDineroEnManoModal"
-                            class="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:text-gray-400 dark:hover:text-gray-300"
-                        >
-                            <span class="sr-only">Cerrar</span>
-                            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                {{-- Cuerpo del Modal (Formulario) --}}
-                <form wire:submit.prevent="realizarTransferenciaDineroEnMano">
-                    <div class="bg-white px-4 pb-4 pt-5 dark:bg-gray-800 sm:p-6 sm:pb-4">
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-1">Usuario: <span class="font-semibold">{{ $usuarioSeleccionado?->name }}</span></p>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mb-3">Ingrese un monto positivo para mover de Mano a Caja, o negativo para mover de Caja a Mano.</p>
-                        <div>
-                            <label for="montoTransferenciaDineroEnManoInput" class="block text-sm font-medium text-gray-700 dark:text-gray-200 sr-only">Monto a Transferir</label>
-                            <input type="number" step="any" id="montoTransferenciaDineroEnManoInput" wire:model.defer="montoTransferenciaDineroEnMano" required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 sm:text-sm"
-                                placeholder="Ej: 20000 o -10000">
-                            @error('montoTransferenciaDineroEnMano') <span class="mt-1 text-sm text-red-600 dark:text-red-400">{{ $message }}</span> @enderror
-                        </div>
-                    </div>
-
-                    {{-- Pie del Modal (Botones) --}}
-                    <div class="custom-modal-footer"> {{-- Usando la clase de tu adjust-money-modal para consistencia --}}
-                        <button type="submit" class="btn-ajustar">Aceptar</button>
-                        <button type="button" wire:click="closeTransferenciaDineroEnManoModal" class="btn-cancelar">Cancelar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    @endif
 </div>

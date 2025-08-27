@@ -45,13 +45,19 @@ class StatsOverview extends BaseWidget
                 ->color('success')
                 ->description('Total de préstamos activos o autorizados')
                 ->url(route('filament.admin.resources.prestamos.index')),
-
+                
             Stat::make('Préstamos pendientes', Prestamo::where('estado', 'pendiente')->count())
                 ->label('Préstamos pendientes')
                 ->icon('heroicon-o-exclamation-circle')
                 ->color('warning')
                 ->description('Préstamos en espera de autorización')
-                ->url($primerPrestamoPendiente ? route('filament.admin.resources.prestamos.edit', $primerPrestamoPendiente->id) : null),
+                ->url(route('filament.admin.resources.prestamos.index', [
+                    'tableFilters' => [
+                        'estado' => [
+                            'value' => 'pendiente',
+                        ],
+                    ],
+                ])),
 
             Stat::make('Préstamos con pagos atrasados', $this->getPrestamosConPagoAtrasado())
                 ->label('Préstamos atrasados')
@@ -59,6 +65,20 @@ class StatsOverview extends BaseWidget
                 ->color('warning')
                 ->description('Cantidad de préstamos vencidos o con pagos atrasados')
                 ->url($primerPrestamoAtrasado ? route('filament.admin.resources.prestamos.edit', $primerPrestamoAtrasado->id) : null),
+            
+            // --- LÍNEA MODIFICADA AQUÍ ---
+            Stat::make('Préstamos desactivados', Prestamo::where('estado', 'desactivado')->count())
+                ->label('Préstamos desactivados')
+                ->icon('heroicon-o-no-symbol')
+                ->color('gray')
+                ->description('Total de préstamos que han sido desactivados')
+                ->url(route('filament.admin.resources.prestamos.index', [
+                    'tableFilters' => [
+                        'estado' => [
+                            'value' => 'desactivado',
+                        ],
+                    ],
+                ])),
 
             Stat::make('Préstamos con menos del 30% de deuda', $this->getPrestamosConDeudaReducida())
                 ->label('Préstamos sin refinanciar')
@@ -67,9 +87,10 @@ class StatsOverview extends BaseWidget
                 ->description('Préstamos con menos del 30% de deuda restante')
                 ->url($primerPrestamoReducido ? route('filament.admin.resources.prestamos.edit', $primerPrestamoReducido->id) : null),
 
-            // NUEVO STAT: Préstamos con next_payment atrasado
         ];
     }
+
+    // ... (El resto de tus métodos permanecen igual)
 
     protected function getPrestamosConDeudaReducida(): int
     {
@@ -99,9 +120,6 @@ class StatsOverview extends BaseWidget
         });
     }
 
-    /**
-     * Cuenta los préstamos cuyo next_payment sea anterior a hoy (pagos atrasados).
-     */
     protected function getPrestamosConPagoAtrasado(): int
     {
         $hoy = Carbon::today();
@@ -114,5 +132,4 @@ class StatsOverview extends BaseWidget
                 return $nextPayment !== null && $nextPayment->lt($hoy);
             })->count();
     }
-
 }

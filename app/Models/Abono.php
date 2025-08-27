@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Validation\ValidationException;
 
 class Abono extends Model
 {
@@ -41,6 +42,13 @@ class Abono extends Model
         parent::boot();
 
         static::creating(function ($abono){
+            
+            if ($abono->prestamo && $abono->prestamo->estado === 'desactivado') {
+                throw ValidationException::withMessages([
+                    'prestamo_id' => 'No se pueden registrar abonos a un préstamo que está desactivado.'
+                ]);
+            }
+
             $maxCuota = self::where('prestamo_id', $abono->prestamo_id)->max('numero_cuota');
             $abono->numero_cuota = $maxCuota ? $maxCuota + 1 : 1;
 
@@ -95,32 +103,49 @@ class Abono extends Model
 
     public function getDeudaAnteriorAttribute()
     {
-        $principal = $this->prestamo->valor_total_prestamo ?? 0;
-        $cuotas = $this->prestamo->numero_cuotas ?? 0;
-        $tasa = ($this->prestamo->getOriginal('interes') ?? 0) / 100;
+        $prestamo = $this->prestamo;
 
-        $total = $principal + ($principal * $tasa);
-        // $abonos = $this->prestamo->abonos()->sum('monto_abono') ?? 0;
+        if (!$prestamo) {
+            return 0;
+        }
 
-        $abonos = $this->prestamo->abonos()
+        // 1. Empezamos con el valor total original del préstamo, incluyendo su interés inicial.
+        //    Esto es acceder al atributo de la BD directamente para no causar un bucle si getInteresAttribute cambia.
+        $tasaOriginal = ($prestamo->getAttributes()['interes'] ?? 0) / 100;
+        $deudaBase = $prestamo->valor_total_prestamo + ($prestamo->valor_total_prestamo * $tasaOriginal);
+
+        // 2. Sumamos el 'total' de todos los refinanciamientos autorizados que ocurrieron ANTES de este abono.
+        //    Usamos 'created_at' como punto de referencia temporal.
+        $totalRefinanciamientosAnteriores = $prestamo->refinanciamientos()
+            ->where('estado', 'autorizado')
+            ->where('created_at', '<', $this->created_at) // Clave: solo los que pasaron antes
+            ->sum('total');
+
+        // 3. Sumamos todos los abonos realizados ANTES del abono actual.
+        //    Usar el ID es la forma más segura para orden cronológico de creación.
+        $totalAbonosAnteriores = $prestamo->abonos()
             ->where('id', '<', $this->id)
             ->sum('monto_abono');
 
-        $refin = $this->prestamo->refinanciamientos()->sum('total') ?? 0;
-        return max($total - $abonos + $refin, 0);
+        // 4. La deuda anterior es: (Deuda Base) + (Suma de Refinanciamientos Anteriores) - (Suma de Abonos Anteriores)
+        $deudaCalculada = $deudaBase + $totalRefinanciamientosAnteriores - $totalAbonosAnteriores;
+
+        return max($deudaCalculada, 0);
     }
 
+    /**
+     * Calcula la deuda del préstamo justo DESPUÉS de que este abono se aplicara.
+     * Esta lógica sigue siendo simple y correcta, depende de la anterior.
+     */
     public function getDeudaActualAttribute()
     {
-        $principal = $this->prestamo->valor_total_prestamo ?? 0;
-        $cuotas = $this->prestamo->numero_cuotas ?? 0;
-        $tasa = ($this->prestamo->getOriginal('interes') ?? 0) / 100;
+        // La deuda actual es simplemente la deuda anterior menos el monto de este abono.
+        $deudaAnterior = $this->getDeudaAnteriorAttribute();
+        $deudaCalculada = $deudaAnterior - $this->monto_abono;
 
-        $total = $principal + ($principal * $tasa);
-        $abonos = $this->prestamo->abonos()->sum('monto_abono') ?? 0;
-        $refin = $this->prestamo->refinanciamientos()->sum('total') ?? 0;
-        return max($total - $abonos + $refin, 0);
+        return max($deudaCalculada, 0);
     }
+
 
 
     // public function getDeudaActualAttribute()

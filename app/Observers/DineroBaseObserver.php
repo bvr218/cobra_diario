@@ -11,10 +11,10 @@ class DineroBaseObserver
     /**
      * Handle the DineroBase "updated" event.
      */
-    public function updated(DineroBase $dineroBase): void
+    public function updating(DineroBase $dineroBase): void
     {
+        // Se utiliza getDirty() porque en el evento 'updating' los cambios ya están "sucios".
         $dirtyAttributes = $dineroBase->getDirty();
-        $originalAttributes = $dineroBase->getOriginal();
 
         // Verificar si solo 'monto' y 'dinero_en_mano' cambiaron (transferencia)
         $isTransferOperation = count($dirtyAttributes) === 2 &&
@@ -35,7 +35,7 @@ class DineroBaseObserver
                 ['monto' => $nuevoMonto, 'dinero_en_mano' => $nuevoDineroEnMano],
                 "Transferencia entre Caja y Dinero en Mano. Usuario ID: {$dineroBase->user_id}"
             );
-        } elseif ($dineroBase->isDirty('monto')) { // Otro tipo de cambio solo en 'monto'
+        } elseif (array_key_exists('monto', $dirtyAttributes)) { // Otro tipo de cambio que incluye 'monto'
             $originalMonto = $dineroBase->getOriginal('monto');
             $nuevoMonto = $dineroBase->monto;
             $this->registrarMovimiento(

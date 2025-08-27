@@ -67,6 +67,18 @@ class RoleResource extends Resource
                     ->label('Permisos')
                     ->counts('permissions')
                     ->toggleable(),
+                // Tables\Columns\TextColumn::make('permissions.name')
+                //     ->label('Permisos')
+                //     ->formatStateUsing(function ($state) {
+                //         // $state contendrá un array con los nombres de los permisos.
+                //         // Usamos implode para unirlos en una sola cadena, separados por un salto de línea.
+                //         if (is_array($state)) {
+                //             return implode("\n", $state);
+                //         }
+                //         return $state;
+                //     })
+                //     ->wrap() // Mantenemos el ajuste de línea
+                //     ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Creado')
                     ->toggleable(),

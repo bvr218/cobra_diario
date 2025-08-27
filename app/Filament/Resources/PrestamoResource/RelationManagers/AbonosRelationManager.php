@@ -20,9 +20,16 @@ class AbonosRelationManager extends RelationManager
 {
     protected static string $relationship = 'abonos';
 
+    protected function canCreate(): bool
+    {
+        // "ownerRecord" es el préstamo que se está viendo
+        if ($this->ownerRecord->estado === 'desactivado') {
+            return false;
+        }
 
-
-
+        return parent::canCreate();
+    }
+    
     public function form(Form $form): Form
     {
         return $form
@@ -67,6 +74,7 @@ class AbonosRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('monto_abono')->label('Monto del Abono')->formatStateUsing(fn ($state) => '$' . number_format($state, 0, ',', '.') . ' COP'),
                 Tables\Columns\TextColumn::make('deuda_actual')->label('Deuda Actual')->formatStateUsing(fn ($state) => '$' . number_format($state, 0, ',', '.') . ' COP'),
                 Tables\Columns\TextColumn::make('fecha_abono')->label('Fecha del Abono'),
+                Tables\Columns\TextColumn::make('created_at')->label('Fecha de Registro')->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 //

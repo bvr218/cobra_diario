@@ -4,7 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\GastoResource\Pages;
 use App\Models\Gasto;
-use App\Models\User; // Use App\Models\User
+use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Forms\Components;
@@ -16,9 +16,13 @@ use Filament\Tables\Columns;
 use Filament\Tables\Actions\Action;
 use Illuminate\Support\Facades\Auth;
 use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Actions\DeleteAction; // Add this for single record delete action
+use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\ImageColumn;
+// --- IMPORTACIONES NUEVAS ---
+use Filament\Tables\Filters\SelectFilter;
+use Illuminate\Database\Eloquent\Builder;
+// --- FIN IMPORTACIONES NUEVAS ---
 
 class GastoResource extends Resource
 {
@@ -31,15 +35,11 @@ class GastoResource extends Resource
 
     public static function canAccess(): bool
     {
-        // Asegúrate de que el permiso 'gastos.index' exista y esté asignado correctamente
-        // o ajusta el permiso según tus necesidades.
         return Auth::user()?->can('gastos.index') || Auth::user()?->can('gastos.view') || Auth::user()?->can('gastosOficina.index') ?? false;
     }
 
-    // Opcional: si quieres que aparezca en la navegación solo si tiene permiso
     public static function shouldRegisterNavigation(): bool
     {
-        // Mismo permiso que canAccess o uno específico para la navegación
         return Auth::user()?->can('gastos.index') || Auth::user()?->can('gastos.view') || Auth::user()?->can('gastosOficina.index') ?? false;
     }
 
@@ -66,13 +66,9 @@ class GastoResource extends Resource
                     })
                     ->disabled(function (?Gasto $record) {
                         $user = auth()->user();
-
-                        // Disable for users with only 'gastos.view' permission
                         if ($user->can('gastos.view')) {
                             return true;
                         }
-
-                        // Disable if authorized and user doesn't have edit permissions
                         return $record?->autorizado &&
                             !$user->can('gastos.index') &&
                             !$user->can('gastosOficina.index');
@@ -161,6 +157,48 @@ class GastoResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
             ])
+            // --- INICIO DE LA SECCIÓN DE FILTROS ---
+            ->filters([
+                // Filtro para seleccionar entre gastos autorizados y pendientes
+                SelectFilter::make('autorizado')
+                    ->label('Estado de Autorización')
+                    ->options([
+                        '1' => 'Autorizados',
+                        '0' => 'Pendientes',
+                    ]),
+
+                // Filtro para seleccionar gastos con o sin imagen
+                SelectFilter::make('imagen')
+                    ->label('Filtro por Imagen')
+                    ->options([
+                        'con_imagen' => 'Con Imagen',
+                        'sin_imagen' => 'Sin Imagen',
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        $value = $data['value'];
+
+                        if (blank($value)) {
+                            return $query;
+                        }
+
+                        // Si se selecciona 'Con Imagen', buscamos registros donde 'imagen' no es nulo
+                        // y no es un array JSON vacío '[]'.
+                        if ($value === 'con_imagen') {
+                            return $query->whereNotNull('imagen')->where('imagen', '!=', '[]');
+                        }
+
+                        // Si se selecciona 'Sin Imagen', buscamos registros donde 'imagen' es nulo
+                        // o es un array JSON vacío '[]'.
+                        if ($value === 'sin_imagen') {
+                            return $query->where(function (Builder $q) {
+                                $q->whereNull('imagen')->orWhere('imagen', '=', '[]');
+                            });
+                        }
+                        
+                        return $query;
+                    }),
+            ])
+            // --- FIN DE LA SECCIÓN DE FILTROS ---
             ->paginationPageOptions([10, 25, 50, 100, 500])
             ->defaultPaginationPageOption(25)
             ->defaultSort('created_at', 'desc')
@@ -185,12 +223,10 @@ class GastoResource extends Resource
                     ->visible(fn (Gasto $record): bool =>
                         auth()->user()->can('gastos.index') || auth()->user()->can('gastosOficina.index') || !$record->autorizado
                     ),
-                // Show delete action only if user has 'gastos.delete' permission
                 DeleteAction::make()
                     ->visible(fn (): bool => auth()->user()->can('gastos.delete')),
             ])
             ->bulkActions([
-                // Show bulk delete action only if user has 'gastos.delete' permission
                 DeleteBulkAction::make()
                     ->visible(fn (): bool => auth()->user()->can('gastos.delete')),
             ]);
@@ -212,10 +248,6 @@ class GastoResource extends Resource
         ];
     }
 
-    /**
-     * Define the global authorization for deleting a record.
-     * This method is called by Filament to check if a user can delete.
-     */
     public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
     {
         return auth()->user()->can('gastos.delete');

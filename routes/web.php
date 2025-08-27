@@ -25,3 +25,6 @@ Route::get('users/{user}/historial/export-excel', [UserHistorialController::clas
 
 Route::get('users/{user}/historial/export-pdf', [UserHistorialController::class, 'exportPdf'])
     ->name('users.historial.pdf');
+
+Route::get('/liquidacion/pdf/{tipo}/{agentId}/{year}/{month}', [LiquidacionPDFController::class, 'exportListToPdf'])
+    ->name('liquidacion.detalle.pdf');

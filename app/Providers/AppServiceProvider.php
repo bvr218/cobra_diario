@@ -22,6 +22,7 @@ use App\Observers\RefinanciamientoObserver;
 use App\Observers\GenericObserver;
 use App\Observers\DineroBaseObserver;
 use Spatie\Permission\Models\Role;
+use App\Models\RegistroLiquidacion;
 use Spatie\Permission\Models\Permission;
 
 use Filament\Facades\Filament;
@@ -62,7 +63,8 @@ class AppServiceProvider extends ServiceProvider
             DineroBase::class,
             Cliente::class,
             User::class,  
-            ControlSesion::class,   
+            ControlSesion::class,
+            RegistroLiquidacion::class,   
             Frecuencia::class,    
         ];
 

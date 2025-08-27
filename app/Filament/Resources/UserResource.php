@@ -17,14 +17,23 @@ use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Filters\SelectFilter;
 use Spatie\Permission\Models\Role;
 use Filament\Facades\Filament;
-use Filament\Tables\Actions\Action as TablesAction; // Importar TablesAction
+use Filament\Tables\Actions\Action as TablesAction;
+
+// --- Importaciones para SoftDeletes ---
+use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Actions\ForceDeleteAction;
+use Filament\Tables\Actions\RestoreAction;
+use Filament\Tables\Actions\ForceDeleteBulkAction;
+use Filament\Tables\Actions\RestoreBulkAction;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
     protected static ?string $label = 'Agente';
     protected static ?string $pluralLabel = 'Agentes';
-    protected static ?string $navigationIcon = 'heroicon-o-users'; // Cambiado a un ícono más adecuado para usuarios
+    protected static ?string $navigationIcon = 'heroicon-o-users';
     protected static ?string $navigationGroup = 'Administración de Usuarios';
 
     public static function form(Form $form): Form
@@ -48,8 +57,8 @@ class UserResource extends Resource
                 ->label('Contraseña')
                 ->password()
                 ->required(fn (string $context) => $context === 'create')
-                ->minLength(8)
-                ->maxLength(30)
+                ->minLength(4)
+                ->maxLength(4)
                 ->rule(['confirmed', 'max:50'])
                 ->autocomplete(false)
                 ->helperText('Mínimo 8 caracteres, máximo 30')
@@ -59,8 +68,8 @@ class UserResource extends Resource
                 ->label('Confirmar contraseña')
                 ->password()
                 ->required(fn (string $context) => $context === 'create')
-                ->minLength(8)
-                ->maxLength(30)
+                ->minLength(4)
+                ->maxLength(4)
                 ->dehydrated(false)
                 ->autocomplete(false),
 
@@ -141,6 +150,7 @@ class UserResource extends Resource
                         'success' => 'admin',
                         'info'    => 'oficina',
                         'warning' => 'agente',
+                        'morado'  => 'Supervisor',
                     ])
                     ->sortable()
                     ->searchable()
@@ -148,6 +158,7 @@ class UserResource extends Resource
                 TextColumn::make('email')->label('Correo')->sortable()->searchable()->toggleable(),
                 TextColumn::make('oficina.name')->label('Oficina')->sortable()->searchable()->toggleable(),
                 TextColumn::make('created_at')->label('Fecha de registro')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('deleted_at')->label('Fecha de eliminación')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('roles')
@@ -156,6 +167,8 @@ class UserResource extends Resource
                     ->query(fn ($query, $data) => $data['value']
                         ? $query->whereHas('roles', fn ($q) => $q->where('name', $data['value']))
                         : $query),
+                // // --- Filtro para ver eliminados ---
+                // TrashedFilter::make(),
             ])
             ->paginationPageOptions([10, 25, 50, 100, 500])
             ->defaultPaginationPageOption(25)
@@ -164,28 +177,42 @@ class UserResource extends Resource
                 EditAction::make(),
                 DeleteAction::make()
                     ->visible(fn () => auth()->user()->can('users.delete')),
-
+                
+                // --- Acciones para restaurar y forzar borrado ---
+                ForceDeleteAction::make(),
+                RestoreAction::make(),
 
                 TablesAction::make('verHistorialUsuario')
                     ->label('Ver Historial')
                     ->icon('heroicon-o-document-magnifying-glass')
                     ->color('info')
-                    ->visible(fn(): bool => auth()->user()->can('users.index')) // O el permiso que consideres adecuado para ver historial de usuarios
+                    ->visible(fn(): bool => auth()->user()->can('users.index'))
                     ->modalHeading(fn(User $record): string => 'Historial de ' . ($record->roles->first()?->name ?? 'Usuario') . ': ' . $record->name)
                     ->modalWidth('4xl')
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Cerrar')
                     ->modalContent(fn(User $record) => view(
-                        'filament.forms.components.user-historial-viewer', // Apunta a la nueva vista de usuario
-                        ['user' => $record->id] // Pasa el objeto User al modal
+                        'filament.forms.components.user-historial-viewer',
+                        ['user' => $record->id]
                     )),
-                // --- Fin de Nueva Acción ---
             ])
             ->bulkActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make()
                         ->visible(fn () => auth()->user()->can('users.delete')),
+                    // --- Acciones en lote para restaurar y forzar borrado ---
+                    ForceDeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
                 ]),
+            ]);
+    }
+
+    // --- Método para incluir registros con SoftDeletes ---
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
             ]);
     }
 
@@ -194,7 +221,7 @@ class UserResource extends Resource
         return [
             'index'  => Pages\ListUsers::route('/'),
             'create' => Pages\CreateUser::route('/create'),
-            'edit'   => Pages\EditUser::route('/{record}/edit'), // Ajusta EditUser a EditUsers si es el nombre de tu clase
+            'edit'   => Pages\EditUser::route('/{record}/edit'),
         ];
     }
 }
